@@ -34,6 +34,7 @@
     <enforcer.version>3.7.0</enforcer.version>
     <pitest.version>1.30.2</pitest.version>
     <pitest-junit5.version>1.2.3</pitest-junit5.version>
+    <dependency-check.version>13.0.0</dependency-check.version>
     <archunit.version>1.5.1</archunit.version>
 
     <coverage.minimum>0.80</coverage.minimum>
@@ -216,6 +217,39 @@
   </build>
 
   <profiles>
+    <profile>
+      <!-- Análise de dependências: mvn -Psca verify (exige NVD_API_KEY) -->
+      <id>sca</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${dependency-check.version}</version>
+            <inherited>false</inherited>
+            <configuration>
+              <failBuildOnCVSS>7</failBuildOnCVSS>
+              <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+              <nvdApiDelay>1000</nvdApiDelay>
+              <skipTestScope>true</skipTestScope>
+              <formats>
+                <format>HTML</format>
+                <format>JSON</format>
+              </formats>
+            </configuration>
+            <executions>
+              <execution>
+                <id>dependency-check</id>
+                <goals>
+                  <goal>aggregate</goal>
+                </goals>
+                <phase>verify</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <!-- Testes de mutação: mvn -Pmutation verify (lento, fora do build padrão) -->
       <id>mutation</id>

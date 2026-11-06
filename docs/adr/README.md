@@ -22,3 +22,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0014](0014-react-typescript-mantine-e-monaco-no-frontend.md) | D14 | React, TypeScript, Mantine e Monaco no frontend |
 | [0015](0015-segredos-em-cofre.md) | D15 | Segredos em cofre |
 | [0016](0016-java-25-lts-e-spring-boot-4-1.md) | T1 | Java 25 LTS e Spring Boot 4.1 |
+| [0017](0017-scripts-em-processos-trabalhadores.md) | D7 | Scripts de integradores em processos trabalhadores |

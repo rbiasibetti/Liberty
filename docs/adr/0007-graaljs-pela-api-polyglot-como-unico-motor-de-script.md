@@ -14,7 +14,7 @@ Scripts são JavaScript executados em `Context` do GraalJS com `HostAccess.EXPLI
 
 ## Consequências
 
-Limite de memória por script só existe na Oracle GraalVM; o isolamento final depende do resultado da etapa E04 (ADR próprio).
+Limite de memória por script só existe na Oracle GraalVM; o isolamento de CPU e memória foi decidido na etapa E04: processos trabalhadores ([0017](0017-scripts-em-processos-trabalhadores.md)).
 
 ## Alternativas descartadas
 

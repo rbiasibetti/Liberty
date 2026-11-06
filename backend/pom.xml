@@ -251,6 +251,13 @@
       </build>
     </profile>
     <profile>
+      <!-- Provas de conceito descartáveis (E04): mvn -Ppoc verify -->
+      <id>poc</id>
+      <modules>
+        <module>poc/script-isolation</module>
+      </modules>
+    </profile>
+    <profile>
       <!-- Testes de mutação: mvn -Pmutation verify (lento, fora do build padrão) -->
       <id>mutation</id>
       <build>

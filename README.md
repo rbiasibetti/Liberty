@@ -26,6 +26,8 @@ make local-up  # sobe o ambiente local completo (veja abaixo)
 make local-down
 ```
 
+Provas de conceito descartáveis ficam em `backend/poc` e só entram no build com `-Ppoc` (`cd backend && ./mvnw -Ppoc verify`).
+
 Rodar a aplicação: `cd backend && ./mvnw -pl liberty-app spring-boot:run` e `cd frontend && npm run dev`.
 
 ## Ambiente local

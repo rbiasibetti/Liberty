@@ -1,0 +1,5 @@
+# Cenários que a execução noturna roda, um por linha. Adicione quando o endpoint existir:
+#   escrita.js           depois da E12 (e integração pedido-k6 publicada)
+#   leitura.js           depois da E11
+#   vizinho-barulhento.js depois da E18
+smoke.js

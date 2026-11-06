@@ -1,0 +1,5 @@
+{
+  "name": "liberty-loadtest",
+  "private": true,
+  "type": "module"
+}

@@ -28,6 +28,8 @@ make local-down
 
 Provas de conceito descartáveis ficam em `backend/poc` e só entram no build com `-Ppoc` (`cd backend && ./mvnw -Ppoc verify`).
 
+Requisitos não funcionais e SLOs: [docs/requisitos-nao-funcionais.md](docs/requisitos-nao-funcionais.md); testes de carga em `loadtest/` (k6, rodam toda noite).
+
 Rodar a aplicação: `cd backend && ./mvnw -pl liberty-app spring-boot:run` e `cd frontend && npm run dev`.
 
 ## Ambiente local

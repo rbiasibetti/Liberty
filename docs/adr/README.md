@@ -24,3 +24,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0016](0016-java-25-lts-e-spring-boot-4-1.md) | T1 | Java 25 LTS e Spring Boot 4.1 |
 | [0017](0017-scripts-em-processos-trabalhadores.md) | D7 | Scripts de integradores em processos trabalhadores |
 | [0018](0018-slos-e-capacidade.md) | E05 | SLOs e capacidade |
+| [0019](0019-persistencia-do-core.md) | E06 | Persistência do banco central |

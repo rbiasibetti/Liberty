@@ -1,6 +1,21 @@
 spring:
   application:
     name: liberty
+  datasource:
+    # Banco central (liberty_core). Sem valores padrão para URL e senha: sem eles a aplicação não sobe.
+    url: ${LIBERTY_CORE_URL}
+    username: ${LIBERTY_CORE_APP_USER:liberty_core_app}
+    password: ${LIBERTY_CORE_APP_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 5000
+      leak-detection-threshold: 20000
+  flyway:
+    enabled: false # a migração roda na esteira de deploy (liberty-core-migrations), não na subida
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
   main:
     banner-mode: "off"
   jackson:
@@ -27,6 +42,9 @@ management:
       probes:
         enabled: true
       show-details: never
+      group:
+        readiness:
+          include: readinessState,db
   info:
     env:
       enabled: false

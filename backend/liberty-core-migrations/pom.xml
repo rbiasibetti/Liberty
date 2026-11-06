@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>br.com.liberty</groupId>
+    <artifactId>liberty-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>liberty-core-migrations</artifactId>
+  <name>Liberty Core Migrations</name>
+  <description>Migrações Flyway do banco central; sem dependências, para rodar isoladamente na esteira de deploy</description>
+
+  <properties>
+    <jacoco.skip>true</jacoco.skip>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <!-- Esteira de deploy: mvnw -pl liberty-core-migrations flyway:migrate -Dflyway.url=... -Dflyway.user=... -Dflyway.password=... -->
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <version>${flyway.version}</version>
+        <configuration>
+          <locations>
+            <location>filesystem:src/main/resources/db/migration/core</location>
+          </locations>
+          <table>int_flyway_schema_history</table>
+          <validateMigrationNaming>true</validateMigrationNaming>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-sqlserver</artifactId>
+            <version>${flyway.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>${mssql-jdbc.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+</project>

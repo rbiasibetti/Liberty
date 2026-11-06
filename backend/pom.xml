@@ -18,6 +18,8 @@
 
   <modules>
     <module>liberty-domain</module>
+    <module>liberty-core-migrations</module>
+    <module>liberty-infrastructure</module>
     <module>liberty-app</module>
   </modules>
 
@@ -46,6 +48,22 @@
         <groupId>br.com.liberty</groupId>
         <artifactId>liberty-domain</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>br.com.liberty</groupId>
+        <artifactId>liberty-core-migrations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>br.com.liberty</groupId>
+        <artifactId>liberty-infrastructure</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>br.com.liberty</groupId>
+        <artifactId>liberty-infrastructure</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>com.tngtech.archunit</groupId>

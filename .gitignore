@@ -1,0 +1,26 @@
+# build
+target/
+node_modules/
+dist/
+coverage/
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# local secrets and config (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+application-local.*
+
+# working files
+proposta.odt.lock
+.~lock.*

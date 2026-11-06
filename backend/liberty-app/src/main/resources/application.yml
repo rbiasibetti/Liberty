@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: liberty
+  main:
+    banner-mode: "off"
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+server:
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+  servlet:
+    encoding:
+      force: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  info:
+    env:
+      enabled: false

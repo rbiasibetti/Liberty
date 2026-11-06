@@ -14,7 +14,7 @@ Arquivos gerados vão para armazenamento compatível com S3 e são entregues por
 
 ## Consequências
 
-Entra na fase 2 (E24). O desenvolvimento local usa MinIO.
+Entra na fase 2 (E24). O armazenamento local de desenvolvimento será escolhido na E24: as imagens da edição comunitária do MinIO deixaram de ser distribuídas, então ele não está no ambiente local da E03.
 
 ## Alternativas descartadas
 

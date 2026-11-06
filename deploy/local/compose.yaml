@@ -1,0 +1,94 @@
+# Ambiente local do Liberty. Suba com `make local-up` (lê .env.local, gera segredos que faltarem).
+# Todas as portas escutam só em 127.0.0.1. Dados são descartáveis (sem volumes nomeados persistentes).
+name: liberty-local
+
+services:
+  mssql:
+    profiles: ["mssql"] # usado só se não houver SQL Server local na porta 1433
+    image: mcr.microsoft.com/mssql/server:2022-CU27-ubuntu-22.04@sha256:190696778dca17a0862a3a5680068357cdd09dd0ced185b2ed918e4a0226695a
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${LIBERTY_TEST_DB_PASSWORD:?defina em .env.local}
+    ports: ["127.0.0.1:1433:1433"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, SETUID, SETGID]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/1433"]
+      interval: 5s
+      retries: 30
+
+  redis:
+    image: redis:8.10.3-alpine@sha256:71885d8cc6e42f2bc0aa2eb853bfc4be200b5108a46ac50e117ae1df0531fb80
+    command: ["redis-server", "--requirepass", "${LIBERTY_REDIS_PASSWORD:?defina em .env.local}", "--save", "", "--appendonly", "no"]
+    ports: ["127.0.0.1:6379:6379"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$LIBERTY_REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      retries: 20
+    environment:
+      LIBERTY_REDIS_PASSWORD: ${LIBERTY_REDIS_PASSWORD}
+
+  vault:
+    image: hashicorp/vault:1.21.4@sha256:4e33b126a59c0c333b76fb4e894722462659a6bec7c48c9ee8cea56fccfd2569
+    # Modo dev: em memória, apenas para desenvolvimento. Produção usa Vault ou Key Vault gerenciado.
+    command: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${LIBERTY_VAULT_TOKEN:?defina em .env.local}
+    ports: ["127.0.0.1:8200:8200"]
+    cap_add: [IPC_LOCK]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 5s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2@sha256:3879c623248408de29a5303178b5816c77e8dfef3890c361f8c0bbeaa979ba3b
+    command: ["start-dev", "--import-realm", "--http-host=0.0.0.0"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${LIBERTY_KEYCLOAK_ADMIN_PASSWORD:?defina em .env.local}
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/liberty-realm.json:/opt/keycloak/data/import/liberty-realm.json:ro
+    ports: ["127.0.0.1:8081:8080"]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 10s
+      retries: 30
+      start_period: 30s
+
+  prometheus:
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["127.0.0.1:9090:9090"]
+    security_opt: ["no-new-privileges:true"]
+
+  grafana:
+    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${LIBERTY_GRAFANA_ADMIN_PASSWORD:?defina em .env.local}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [prometheus]
+    security_opt: ["no-new-privileges:true"]
+
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0@sha256:3823829974ccfc2485d2e48b165579091f32295022ae80ca49704e2f4834116e
+    ports:
+      - "127.0.0.1:16686:16686" # interface
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
+      - "127.0.0.1:4318:4318"   # OTLP HTTP
+    security_opt: ["no-new-privileges:true"]

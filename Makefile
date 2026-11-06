@@ -1,4 +1,4 @@
-.PHONY: setup verify format mutation
+.PHONY: setup verify format mutation local-up local-down local-reset
 
 setup:
 	git config core.hooksPath .githooks
@@ -13,3 +13,11 @@ format:
 
 mutation:
 	cd backend && ./mvnw -ntp -Pmutation verify
+
+local-up:
+	scripts/local-up.sh
+
+local-down:
+	scripts/local-down.sh
+
+local-reset: local-down local-up

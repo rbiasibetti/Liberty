@@ -1,0 +1,23 @@
+{
+  "realm": "liberty",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "bruteForceProtected": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 900,
+  "clients": [
+    {
+      "clientId": "liberty-frontend",
+      "name": "Liberty (interface web)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["http://127.0.0.1:5173/*", "http://localhost:5173/*"],
+      "webOrigins": ["http://127.0.0.1:5173", "http://localhost:5173"],
+      "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "http://127.0.0.1:5173/*" }
+    }
+  ]
+}

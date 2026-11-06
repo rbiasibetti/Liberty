@@ -22,6 +22,17 @@ spring:
     deserialization:
       fail-on-unknown-properties: true
 
+liberty:
+  vault:
+    # Cofre das senhas dos bancos dos tenants. Em produção: authentication=KUBERNETES; TOKEN só em desenvolvimento.
+    uri: ${LIBERTY_VAULT_URI}
+    mount: secret
+    authentication: ${LIBERTY_VAULT_AUTH:TOKEN}
+    token: ${LIBERTY_VAULT_TOKEN:}
+    kubernetes-role: ${LIBERTY_VAULT_K8S_ROLE:liberty}
+  tenancy:
+    pool-idle-ttl: 30m
+
 server:
   shutdown: graceful
   error:

@@ -51,6 +51,7 @@ jobs:
           LIBERTY_CORE_URL: jdbc:sqlserver://127.0.0.1:1433;databaseName=liberty_core;encrypt=true;trustServerCertificate=true
           LIBERTY_CORE_APP_USER: sa
           LIBERTY_CORE_APP_PASSWORD: ${{ env.SA_PASSWORD }}
+          LIBERTY_VAULT_URI: http://127.0.0.1:8200 # o cofre só é consultado quando um tenant é usado
         run: |
           java -jar backend/liberty-app/target/liberty-app.jar > app.log 2>&1 &
           echo $! > app.pid

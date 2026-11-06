@@ -1,4 +1,4 @@
-package br.com.liberty.infrastructure.persistence;
+package br.com.liberty.infrastructure;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

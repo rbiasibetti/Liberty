@@ -26,6 +26,8 @@ class LibertyApplicationTests {
     registry.add("spring.flyway.enabled", () -> "true");
     registry.add("spring.flyway.locations", () -> "classpath:db/migration/core");
     registry.add("spring.flyway.table", () -> "int_flyway_schema_history");
+    registry.add("liberty.vault.uri", () -> "http://127.0.0.1:8200");
+    registry.add("liberty.vault.token", () -> "teste");
   }
 
   @Autowired private MockMvc mvc;

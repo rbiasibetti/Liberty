@@ -27,7 +27,7 @@ make local-up  # sobe o ambiente local completo (veja abaixo)
 make local-down
 ```
 
-Os testes de banco usam o SQL Server de `LIBERTY_TEST_DB_*` (lido de `.env.local` pelo `make verify`) ou, sem ele, um container via Testcontainers. Para rodar a aplicação contra o core local: `LIBERTY_CORE_URL` e `LIBERTY_CORE_APP_PASSWORD` (usuário `liberty_core_app`).
+Os testes de banco usam o SQL Server de `LIBERTY_TEST_DB_*` (lido de `.env.local` pelo `make verify`) ou, sem ele, um container via Testcontainers. Para rodar a aplicação contra o core local: `LIBERTY_CORE_URL` e `LIBERTY_CORE_APP_PASSWORD` (usuário `liberty_core_app`), mais `LIBERTY_VAULT_URI` e `LIBERTY_VAULT_TOKEN` (Vault do `make local-up`).
 
 Provas de conceito descartáveis ficam em `backend/poc` e só entram no build com `-Ppoc` (`cd backend && ./mvnw -Ppoc verify`).
 

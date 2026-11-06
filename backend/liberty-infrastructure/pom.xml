@@ -34,6 +34,14 @@
       <artifactId>flyway-sqlserver</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.vault</groupId>
+      <artifactId>spring-vault-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.microsoft.sqlserver</groupId>
       <artifactId>mssql-jdbc</artifactId>
       <scope>runtime</scope>
@@ -72,16 +80,16 @@
         <!-- O app reutiliza a extensão de banco de teste destes testes -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>br/com/liberty/infrastructure/testsupport/**</include>
-          </includes>
-        </configuration>
         <executions>
           <execution>
             <goals>
               <goal>test-jar</goal>
             </goals>
+            <configuration>
+              <includes>
+                <include>br/com/liberty/infrastructure/testsupport/**</include>
+              </includes>
+            </configuration>
           </execution>
         </executions>
       </plugin>

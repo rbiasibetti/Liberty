@@ -28,17 +28,23 @@ public final class CoreTestDatabase {
 
   private CoreTestDatabase() {}
 
-  public static synchronized Scratch create() {
-    if (admin == null) {
-      admin = connectToServer();
-      Runtime.getRuntime().addShutdownHook(new Thread(CoreTestDatabase::dropAll));
-    }
+  public static Scratch create() {
+    initAdmin();
     String name =
         "liberty_core_test_"
             + HexFormat.of().formatHex(UUID.randomUUID().toString().getBytes()).substring(0, 12);
     execute("master", "CREATE DATABASE [" + name + "] COLLATE Latin1_General_100_CI_AS_SC_UTF8");
-    CREATED.add(name);
+    synchronized (CREATED) {
+      CREATED.add(name);
+    }
     return new Scratch(url(name), admin.user(), admin.password(), name);
+  }
+
+  private static synchronized void initAdmin() {
+    if (admin == null) {
+      admin = connectToServer();
+      Runtime.getRuntime().addShutdownHook(new Thread(CoreTestDatabase::dropAll));
+    }
   }
 
   private static Admin connectToServer() {
@@ -82,7 +88,7 @@ public final class CoreTestDatabase {
   }
 
   private static void dropAll() {
-    for (String name : CREATED) {
+    for (String name : List.copyOf(CREATED)) {
       try {
         execute(
             "master",

@@ -16,6 +16,13 @@
   <name>Liberty</name>
   <description>Plataforma multitenant de integração orientada a metadados</description>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+
   <modules>
     <module>liberty-domain</module>
     <module>liberty-core-migrations</module>

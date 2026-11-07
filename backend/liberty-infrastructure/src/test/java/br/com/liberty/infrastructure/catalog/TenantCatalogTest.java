@@ -3,6 +3,8 @@ package br.com.liberty.infrastructure.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.com.liberty.domain.catalog.InvalidIdentifierException;
+import br.com.liberty.domain.catalog.TableRef;
 import br.com.liberty.domain.tenancy.EnvironmentKind;
 import br.com.liberty.domain.tenancy.TenantId;
 import br.com.liberty.domain.tenancy.TenantScope;

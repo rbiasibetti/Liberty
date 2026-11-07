@@ -1,5 +1,6 @@
 package br.com.liberty.infrastructure.catalog;
 
+import br.com.liberty.domain.catalog.TableRef;
 import br.com.liberty.domain.tenancy.TenantScope;
 import java.util.List;
 import java.util.Optional;

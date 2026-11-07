@@ -1,4 +1,4 @@
-package br.com.liberty.infrastructure.catalog;
+package br.com.liberty.domain.catalog;
 
 /** O nome não tem a forma de um identificador simples; nunca chega ao banco. */
 public class InvalidIdentifierException extends RuntimeException {

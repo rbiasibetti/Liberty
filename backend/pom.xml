@@ -19,6 +19,7 @@
   <modules>
     <module>liberty-domain</module>
     <module>liberty-core-migrations</module>
+    <module>liberty-snapshot</module>
     <module>liberty-infrastructure</module>
     <module>liberty-app</module>
   </modules>
@@ -39,6 +40,7 @@
     <dependency-check.version>13.0.0</dependency-check.version>
     <archunit.version>1.5.1</archunit.version>
     <spring-vault.version>4.1.1</spring-vault.version>
+    <json-schema-validator.version>3.0.9</json-schema-validator.version>
 
     <coverage.minimum>0.80</coverage.minimum>
   </properties>
@@ -49,6 +51,16 @@
         <groupId>br.com.liberty</groupId>
         <artifactId>liberty-domain</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>br.com.liberty</groupId>
+        <artifactId>liberty-snapshot</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.networknt</groupId>
+        <artifactId>json-schema-validator</artifactId>
+        <version>${json-schema-validator.version}</version>
       </dependency>
       <dependency>
         <groupId>br.com.liberty</groupId>

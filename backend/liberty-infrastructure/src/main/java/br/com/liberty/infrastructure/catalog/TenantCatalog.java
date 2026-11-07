@@ -1,5 +1,7 @@
 package br.com.liberty.infrastructure.catalog;
 
+import br.com.liberty.domain.catalog.InvalidIdentifierException;
+import br.com.liberty.domain.catalog.TableRef;
 import br.com.liberty.domain.tenancy.TenantScope;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;

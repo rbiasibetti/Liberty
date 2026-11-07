@@ -1,5 +1,6 @@
 package br.com.liberty.infrastructure.catalog;
 
+import br.com.liberty.domain.catalog.InvalidIdentifierException;
 import java.util.regex.Pattern;
 
 /**

@@ -1,4 +1,4 @@
-package br.com.liberty.infrastructure.catalog;
+package br.com.liberty.domain.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

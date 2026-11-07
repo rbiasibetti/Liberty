@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:liberty:snapshot:v1",
+  "title": "Snapshot de integração Liberty, versão 1",
+  "description": "Documento imutável que descreve uma integração inteira: rota, entrada, operação, mapeamento, scripts, consultas e testes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "integration", "request", "operation"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "method", "route"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 100 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "method": { "enum": ["GET", "POST", "PUT", "PATCH"] },
+        "route": {
+          "type": "string",
+          "maxLength": 400,
+          "pattern": "^/([a-z0-9_-]+|\\{[A-Za-z_][A-Za-z0-9_]*\\})(/([a-z0-9_-]+|\\{[A-Za-z_][A-Za-z0-9_]*\\}))*$"
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "params": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/param" } },
+        "bodySchema": { "type": ["object", "boolean"] },
+        "maxBodyBytes": { "type": "integer", "minimum": 1, "maximum": 5242880 }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["SELECT", "INSERT", "UPSERT", "UPDATE"] },
+        "select": { "$ref": "#/$defs/select" },
+        "write": { "$ref": "#/$defs/write" }
+      },
+      "if": { "properties": { "type": { "const": "SELECT" } } },
+      "then": { "required": ["select"], "not": { "required": ["write"] } },
+      "else": { "required": ["write"], "not": { "required": ["select"] } }
+    },
+    "scripts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "beforeExecute": { "type": ["string", "null"], "maxLength": 65536 },
+        "afterExecute": { "type": ["string", "null"], "maxLength": 65536 }
+      }
+    },
+    "namedQueries": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/namedQuery" } },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "successStatus": { "enum": [200, 201, 202, 204] } }
+    },
+    "idempotency": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "required": { "type": "boolean" } }
+    },
+    "tests": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/testCase" } }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$" },
+    "tableRef": { "type": "string", "pattern": "^([A-Za-z_][A-Za-z0-9_]{0,127}\\.)?[A-Za-z_][A-Za-z0-9_]{0,127}$" },
+    "jsonPointer": { "type": "string", "maxLength": 400, "pattern": "^(/([^/~]|~[01])*)*$" },
+    "param": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "in", "type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "in": { "enum": ["path", "query"] },
+        "type": { "enum": ["string", "integer", "number", "boolean"] },
+        "required": { "type": "boolean" },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 }
+      }
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fn"],
+      "properties": {
+        "fn": { "enum": ["trim", "upper", "lower", "substring", "replace", "digits", "toDate", "toDecimal", "default", "map"] },
+        "args": { "type": "array", "maxItems": 2 }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["column"],
+      "properties": {
+        "column": { "$ref": "#/$defs/identifier" },
+        "source": { "$ref": "#/$defs/jsonPointer" },
+        "param": { "$ref": "#/$defs/identifier" },
+        "constant": {},
+        "transforms": { "type": "array", "maxItems": 10, "items": { "$ref": "#/$defs/transform" } }
+      },
+      "oneOf": [{ "required": ["source"] }, { "required": ["param"] }, { "required": ["constant"] }]
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["table", "fields"],
+      "properties": {
+        "table": { "$ref": "#/$defs/tableRef" },
+        "arrayPath": { "$ref": "#/$defs/jsonPointer" },
+        "primaryKey": { "$ref": "#/$defs/identifier" },
+        "foreignKey": { "$ref": "#/$defs/identifier" },
+        "keyColumns": { "type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "fields": { "type": "array", "minItems": 1, "maxItems": 200, "items": { "$ref": "#/$defs/field" } },
+        "children": { "type": "array", "maxItems": 10, "items": { "$ref": "#/$defs/node" } }
+      }
+    },
+    "write": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root"],
+      "properties": { "root": { "$ref": "#/$defs/node" } }
+    },
+    "select": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["table", "columns"],
+      "properties": {
+        "table": { "$ref": "#/$defs/tableRef" },
+        "columns": { "type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "filters": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["param", "column", "operator"],
+            "properties": {
+              "param": { "$ref": "#/$defs/identifier" },
+              "column": { "$ref": "#/$defs/identifier" },
+              "operator": { "enum": ["=", "<>", ">", ">=", "<", "<=", "LIKE_PREFIX", "IN", "BETWEEN"] },
+              "required": { "type": "boolean" }
+            }
+          }
+        },
+        "sortable": { "type": "array", "maxItems": 30, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "defaultSort": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["column"],
+          "properties": { "column": { "$ref": "#/$defs/identifier" }, "direction": { "enum": ["ASC", "DESC"] } }
+        },
+        "pageSize": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "default": { "type": "integer", "minimum": 1, "maximum": 1000 },
+            "max": { "type": "integer", "minimum": 1, "maximum": 1000 }
+          }
+        },
+        "single": { "type": "boolean" }
+      }
+    },
+    "namedQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sql"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+        "sql": { "type": "string", "minLength": 1, "maxLength": 16384 },
+        "params": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      }
+    },
+    "testCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "expect"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "params": { "type": "object" }, "body": {} }
+        },
+        "expect": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": { "status": { "type": "integer", "minimum": 100, "maximum": 599 }, "bodyContains": {} }
+        }
+      }
+    }
+  }
+}

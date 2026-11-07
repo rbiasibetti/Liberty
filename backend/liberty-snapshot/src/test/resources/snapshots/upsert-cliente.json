@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "integration": { "key": "cliente", "name": "Cadastro de cliente", "method": "PUT", "route": "/clientes/{documento}" },
+  "request": {
+    "params": [{ "name": "documento", "in": "path", "type": "string", "maxLength": 14 }],
+    "bodySchema": { "type": "object", "required": ["nome"], "properties": { "nome": { "type": "string", "minLength": 1 } } }
+  },
+  "operation": {
+    "type": "UPSERT",
+    "write": {
+      "root": {
+        "table": "dbo.tb_cliente",
+        "keyColumns": ["nr_documento"],
+        "fields": [
+          { "column": "nr_documento", "param": "documento" },
+          { "column": "nm_cliente", "source": "/nome", "transforms": [{ "fn": "trim" }] }
+        ]
+      }
+    }
+  },
+  "response": { "successStatus": 200 }
+}

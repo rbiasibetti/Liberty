@@ -1,4 +1,4 @@
-package br.com.liberty.infrastructure.catalog;
+package br.com.liberty.domain.catalog;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,7 +17,12 @@ public record TableRef(String schema, String name) {
   private static final String IDENTIFIER = "[A-Za-z_][A-Za-z0-9_]{0,127}";
   private static final Pattern REFERENCE =
       Pattern.compile("(?:(" + IDENTIFIER + ")\\.)?(" + IDENTIFIER + ")");
-  static final Pattern PLAIN_IDENTIFIER = Pattern.compile(IDENTIFIER);
+  private static final Pattern PLAIN_IDENTIFIER = Pattern.compile(IDENTIFIER);
+
+  /** Identificador simples: o único formato de nome de objeto que a plataforma aceita. */
+  public static boolean isPlainIdentifier(String name) {
+    return name != null && PLAIN_IDENTIFIER.matcher(name).matches();
+  }
 
   public static TableRef parse(String reference) {
     if (reference == null) {
@@ -35,7 +40,7 @@ public record TableRef(String schema, String name) {
    * Chave de comparação: o SQL Server compara identificadores sem diferenciar maiúsculas na maioria
    * dos bancos.
    */
-  TableRef normalized() {
+  public TableRef normalized() {
     return new TableRef(
         schema.toLowerCase(java.util.Locale.ROOT), name.toLowerCase(java.util.Locale.ROOT));
   }

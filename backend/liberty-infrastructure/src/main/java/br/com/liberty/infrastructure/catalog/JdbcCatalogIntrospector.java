@@ -1,5 +1,6 @@
 package br.com.liberty.infrastructure.catalog;
 
+import br.com.liberty.domain.catalog.TableRef;
 import br.com.liberty.domain.tenancy.TenantScope;
 import br.com.liberty.infrastructure.tenancy.TenantPoolRegistry;
 import java.sql.Connection;
@@ -68,9 +69,7 @@ public final class JdbcCatalogIntrospector implements CatalogIntrospector {
           String name = rs.getString("TABLE_NAME");
           // só nomes que a plataforma consegue referenciar: o editor nunca oferece o que seria
           // recusado
-          boolean usable =
-              TableRef.PLAIN_IDENTIFIER.matcher(schema).matches()
-                  && TableRef.PLAIN_IDENTIFIER.matcher(name).matches();
+          boolean usable = TableRef.isPlainIdentifier(schema) && TableRef.isPlainIdentifier(name);
           if (usable && !isSystemSchema(schema)) {
             result.add(
                 new TableSummary(

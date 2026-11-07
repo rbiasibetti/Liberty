@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "integration": { "key": "pedidos-do-cliente", "name": "Pedidos do cliente", "method": "GET", "route": "/clientes/{cliente}/pedidos" },
+  "request": {
+    "params": [
+      { "name": "cliente", "in": "path", "type": "integer" },
+      { "name": "status", "in": "query", "type": "string", "maxLength": 20 }
+    ]
+  },
+  "operation": {
+    "type": "SELECT",
+    "select": {
+      "table": "dbo.vw_pedidos",
+      "columns": ["id", "nr_pedido", "vl_total", "status"],
+      "filters": [
+        { "param": "cliente", "column": "cliente_id", "operator": "=", "required": true },
+        { "param": "status", "column": "status", "operator": "=" }
+      ],
+      "sortable": ["id", "vl_total"],
+      "defaultSort": { "column": "id", "direction": "DESC" },
+      "pageSize": { "default": 50, "max": 500 }
+    }
+  }
+}

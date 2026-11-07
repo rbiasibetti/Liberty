@@ -35,6 +35,21 @@ class ArchitectureTest {
   }
 
   @Test
+  void snapshotLibraryIsFreeOfSpringAndPersistence() {
+    noClasses()
+        .that()
+        .resideInAPackage("br.com.liberty.snapshot..")
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(
+            "org.springframework..",
+            "jakarta..",
+            "br.com.liberty.infrastructure..",
+            "br.com.liberty.security..")
+        .check(classes);
+  }
+
+  @Test
   void applicationDoesNotDependOnInfrastructure() {
     noClasses()
         .that()

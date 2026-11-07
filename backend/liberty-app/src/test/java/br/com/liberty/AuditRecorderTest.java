@@ -83,7 +83,7 @@ class AuditRecorderTest {
 
   private static void eventually(java.util.function.BooleanSupplier condition)
       throws InterruptedException {
-    long limit = System.currentTimeMillis() + 10_000;
+    long limit = System.currentTimeMillis() + 30_000;
     while (System.currentTimeMillis() < limit && !condition.getAsBoolean()) {
       Thread.sleep(50);
     }

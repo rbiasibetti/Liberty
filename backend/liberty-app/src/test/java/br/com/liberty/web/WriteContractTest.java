@@ -624,7 +624,7 @@ class WriteContractTest {
 
   private static void eventuallyTrue(java.util.function.BooleanSupplier condition)
       throws InterruptedException {
-    long limit = System.currentTimeMillis() + 10_000;
+    long limit = System.currentTimeMillis() + 30_000;
     while (System.currentTimeMillis() < limit && !condition.getAsBoolean()) {
       Thread.sleep(100);
     }

@@ -5,7 +5,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage'] },
+  { ignores: ['dist', 'coverage', 'src/api/schema.d.ts'] },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
@@ -25,7 +25,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.js'],
+    // utilitários de teste não são componentes de tela: o fast refresh não se aplica
+    files: ['src/test/**', 'src/**/*.test.{ts,tsx}'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
+    files: ['**/*.{js,mjs}'],
     ...tseslint.configs.disableTypeChecked,
     languageOptions: { globals: globals.node },
   },

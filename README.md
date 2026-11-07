@@ -146,7 +146,7 @@ O `make local-up` escuta só em `127.0.0.1`, gera as senhas que faltarem em `.en
 
 ```bash
 cd backend && ./mvnw -pl liberty-app spring-boot:run     # API em http://localhost:8080
-cd frontend && npm install && npm run dev                # interface web
+cd frontend && npm install && npm run dev                # interface web em http://127.0.0.1:5173 (proxy de /api para a API)
 ```
 
 Sem Vault, `LIBERTY_SECURITY_KEYS_STORE=MEMORY` gera chaves só em memória (apenas desenvolvimento).
@@ -211,14 +211,15 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Sandbox de execução em HML com rollback, rastro de SQL e logs
 - [x] Auditoria assíncrona, partições mensais com arquivamento, métricas Prometheus, rastros OpenTelemetry, dashboard e alertas
 - [x] Proteção de tráfego: limite de taxa por plano (Bucket4j com Redis opcional), bulkhead e 429
-- [ ] Interface web de administração e testes de ponta a ponta
+- [x] Base da interface web: login OIDC com PKCE, troca de tenant, cliente tipado e tratamento de erros
+- [ ] Telas de administração (integrações, mapeamento, publicação) e testes de ponta a ponta
 - [ ] Fase 2 (recursos avançados)
 
 ## Documentação
 
 - [Registros de decisão de arquitetura (ADRs)](docs/adr/README.md)
 - [API de execução](docs/api-execucao.md)
-- [API de administração (ciclo de vida)](docs/api-administracao.md)
+- [API de administração (ciclo de vida)](docs/api-administracao.md) e sua [especificação OpenAPI](docs/openapi/admin-api.yaml)
 - [Requisitos não funcionais e SLOs](docs/requisitos-nao-funcionais.md)
 
 ## Contribuição

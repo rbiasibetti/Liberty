@@ -36,3 +36,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0028](0028-sandbox.md) | E16 | Sandbox de execução |
 | [0029](0029-auditoria-e-observabilidade.md) | E17 | Auditoria e observabilidade |
 | [0030](0030-protecao-de-trafego.md) | E18 | Proteção de tráfego |
+| [0031](0031-frontend-base.md) | E19 | Frontend base |

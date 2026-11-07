@@ -1,0 +1,12 @@
+import { createContext, useContext } from 'react';
+import type { ApiClient } from './client';
+
+export const ApiContext = createContext<ApiClient | null>(null);
+
+export function useApi(): ApiClient {
+  const value = useContext(ApiContext);
+  if (!value) {
+    throw new Error('useApi fora do ApiProvider');
+  }
+  return value;
+}

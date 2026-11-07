@@ -1,0 +1,355 @@
+openapi: 3.1.0
+info:
+  title: Liberty - API de administração
+  version: "1"
+  description: |
+    API para usuários (OIDC) que administram integrações. Os caminhos e verbos são conferidos por um
+    teste do backend contra os controladores, então esta especificação não pode ficar desatualizada.
+servers:
+  - url: /
+security:
+  - oidc: []
+paths:
+  /api/v1/me:
+    get:
+      operationId: me
+      summary: Usuário atual e seus tenants
+      responses:
+        "200":
+          description: Usuário, administração da plataforma e papéis por tenant
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: listIntegrations
+      summary: Lista as integrações do tenant
+      responses:
+        "200":
+          description: Integrações
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Integration" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createIntegration
+      summary: Cria uma integração
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateIntegration" }
+      responses:
+        "201":
+          description: Criada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Integration" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/versions:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+    get:
+      operationId: listVersions
+      summary: Versões da integração
+      responses:
+        "200":
+          description: Versões, da mais nova para a mais antiga
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Version" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/versions/{no}/snapshot:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+      - $ref: "#/components/parameters/VersionNo"
+    get:
+      operationId: getSnapshot
+      summary: Snapshot da versão
+      responses:
+        "200":
+          description: Documento do snapshot
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/draft:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+    put:
+      operationId: saveDraft
+      summary: Salva o rascunho (cria ou substitui)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Versão rascunho
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Version" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/versions/{no}/submit:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+      - $ref: "#/components/parameters/VersionNo"
+    post:
+      operationId: submitVersion
+      summary: Envia o rascunho para revisão
+      responses:
+        "200":
+          description: Versão em revisão
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Version" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/versions/{no}/reject:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+      - $ref: "#/components/parameters/VersionNo"
+    post:
+      operationId: rejectVersion
+      summary: Rejeita a versão em revisão
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Comment" }
+      responses:
+        "200":
+          description: Versão rejeitada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Version" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/versions/{no}/sandbox:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+      - $ref: "#/components/parameters/VersionNo"
+    post:
+      operationId: runSandbox
+      summary: Executa a versão em HML com a transação sempre desfeita
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SandboxRequest" }
+      responses:
+        "200":
+          description: Resultado, rastro de SQL e logs
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SandboxResult" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/versions/{no}/publish/{env}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+      - $ref: "#/components/parameters/VersionNo"
+      - $ref: "#/components/parameters/Env"
+    post:
+      operationId: publishVersion
+      summary: Publica a versão no ambiente
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Comment" }
+      responses:
+        "200":
+          description: Versão publicada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Version" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/environments/{env}/rollback:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+      - $ref: "#/components/parameters/Env"
+    post:
+      operationId: rollback
+      summary: Volta à publicação anterior no ambiente
+      responses:
+        "200":
+          description: Versão agora ativa
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Version" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/integrations/{key}/environments/{env}/publication:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Key"
+      - $ref: "#/components/parameters/Env"
+    delete:
+      operationId: unpublish
+      summary: Despublica do ambiente
+      responses:
+        "204":
+          description: Despublicada
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/environments/{env}/openapi.json:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Env"
+    get:
+      operationId: getExecutionOpenApi
+      summary: OpenAPI das integrações publicadas no ambiente
+      responses:
+        "200":
+          description: Documento OpenAPI 3.1
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        default: { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: /.well-known/openid-configuration
+  parameters:
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema: { type: string }
+    Key:
+      name: key
+      in: path
+      required: true
+      schema: { type: string }
+    VersionNo:
+      name: no
+      in: path
+      required: true
+      schema: { type: integer, format: int32 }
+    Env:
+      name: env
+      in: path
+      required: true
+      schema: { type: string, enum: [HML, PRD, hml, prd] }
+  responses:
+    Problem:
+      description: Erro (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    TenantRole:
+      type: string
+      enum: [VIEWER, INTEGRATOR, PUBLISHER]
+    Me:
+      type: object
+      required: [sub, platformAdmin, tenants]
+      properties:
+        sub: { type: string }
+        platformAdmin: { type: boolean }
+        tenants:
+          type: object
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/TenantRole" }
+    Integration:
+      type: object
+      required: [key, name, method, route, archived]
+      properties:
+        key: { type: string }
+        name: { type: string }
+        method: { type: string, enum: [GET, POST, PUT, PATCH] }
+        route: { type: string }
+        archived: { type: boolean }
+    CreateIntegration:
+      type: object
+      required: [key, name, method, route]
+      properties:
+        key: { type: string }
+        name: { type: string }
+        method: { type: string, enum: [GET, POST, PUT, PATCH] }
+        route: { type: string }
+    Version:
+      type: object
+      required: [versionNo, state, author, createdAt, sha256]
+      properties:
+        versionNo: { type: integer, format: int32 }
+        state: { type: string, enum: [DRAFT, IN_REVIEW, PUBLISHED, REJECTED] }
+        author: { type: string }
+        reviewer: { type: [string, "null"] }
+        comment: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        reviewedAt: { type: [string, "null"], format: date-time }
+        sha256: { type: string }
+    Comment:
+      type: object
+      properties:
+        comment: { type: [string, "null"] }
+    SandboxRequest:
+      type: object
+      properties:
+        params:
+          type: object
+          additionalProperties: true
+        body: {}
+    SqlEntry:
+      type: object
+      required: [sql, rows, millis]
+      properties:
+        sql: { type: string }
+        rows: { type: integer, format: int32 }
+        millis: { type: integer, format: int64 }
+    SandboxResult:
+      type: object
+      required: [succeeded, status, sql, sqlTruncated, logs, millis, rolledBack]
+      properties:
+        succeeded: { type: boolean }
+        status: { type: integer, format: int32 }
+        body: {}
+        problem:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [status, type, detail, violations]
+              properties:
+                status: { type: integer, format: int32 }
+                type: { type: string }
+                detail: { type: string }
+                violations:
+                  type: array
+                  items: { $ref: "#/components/schemas/Violation" }
+        sql:
+          type: array
+          items: { $ref: "#/components/schemas/SqlEntry" }
+        sqlTruncated: { type: boolean }
+        logs: { type: string }
+        millis: { type: integer, format: int64 }
+        rolledBack: { type: boolean }
+    Violation:
+      type: object
+      properties:
+        parameter: { type: string }
+        code: { type: string }
+        message: { type: string }
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer, format: int32 }
+        detail: { type: string }
+        instance: { type: string }
+        requestId: { type: string }
+        errors:
+          type: array
+          items: { $ref: "#/components/schemas/Violation" }

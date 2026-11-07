@@ -1,0 +1,49 @@
+import { Alert, Button, Center, Loader, Stack } from '@mantine/core';
+import { Route, Routes } from 'react-router';
+import { useApi } from './api/apiContext';
+import { AppLayout } from './layout/AppLayout';
+import { HomePage } from './pages/HomePage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { TenantProvider } from './tenant/TenantProvider';
+import { useTenant } from './tenant/tenantContext';
+
+function Gate() {
+  const tenant = useTenant();
+  if (tenant.state === 'loading') {
+    return (
+      <Center h="100vh">
+        <Loader aria-label="Carregando seu acesso" />
+      </Center>
+    );
+  }
+  if (tenant.state === 'error') {
+    return (
+      <Center h="100vh" p="md">
+        <Stack maw={420}>
+          <Alert color="red" title="Não foi possível carregar seu acesso">
+            {tenant.error}
+          </Alert>
+          <Button onClick={tenant.reload}>Tentar de novo</Button>
+        </Stack>
+      </Center>
+    );
+  }
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route index element={<HomePage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  );
+}
+
+/** Parte da aplicação que só existe com sessão: carrega os tenants e monta as rotas. */
+export function AuthenticatedApp() {
+  const api = useApi();
+  return (
+    <TenantProvider api={api}>
+      <Gate />
+    </TenantProvider>
+  );
+}

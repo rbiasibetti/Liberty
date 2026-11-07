@@ -41,5 +41,9 @@ public interface PublicationRepository extends Repository<PublicationEntity, Lon
   String servedToken(
       @Param("tenantId") Long tenantId, @Param("environment") EnvironmentKind environment);
 
+  /** Histórico de publicações da integração no ambiente, da mais recente para a mais antiga. */
+  List<PublicationEntity> findByTenantIdAndIntegrationIdAndEnvironmentOrderByIdDesc(
+      Long tenantId, Long integrationId, EnvironmentKind environment);
+
   PublicationEntity save(PublicationEntity publication);
 }

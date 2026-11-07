@@ -68,6 +68,9 @@
           <excludes>
             <exclude>br/com/liberty/engine/EngineConfig.class</exclude>
             <exclude>br/com/liberty/engine/LibertyEngineProperties.class</exclude>
+            <exclude>br/com/liberty/engine/script/LibertyScriptProperties.class</exclude>
+            <!-- Regras de negócio do ciclo de vida: cobertas ponta a ponta pelo LifecycleContractTest do liberty-app -->
+            <exclude>br/com/liberty/engine/lifecycle/LifecycleService*.class</exclude>
           </excludes>
         </configuration>
       </plugin>

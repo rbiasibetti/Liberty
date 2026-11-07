@@ -207,7 +207,7 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Motor de leitura e roteamento
 - [x] Motor de escrita (master-detail transacional, UPSERT, UPDATE) e idempotência
 - [x] Funções de transformação de campos e motor de scripts JavaScript isolados
-- [ ] Ciclo de vida das integrações (rascunho, revisão, publicação, reversão)
+- [x] Ciclo de vida das integrações (rascunho, revisão, publicação por ambiente, rollback) e OpenAPI gerado
 - [ ] Auditoria, observabilidade e proteção de tráfego (limites de taxa)
 - [ ] Interface web de administração e testes de ponta a ponta
 - [ ] Fase 2 (recursos avançados)
@@ -216,6 +216,7 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 
 - [Registros de decisão de arquitetura (ADRs)](docs/adr/README.md)
 - [API de execução](docs/api-execucao.md)
+- [API de administração (ciclo de vida)](docs/api-administracao.md)
 - [Requisitos não funcionais e SLOs](docs/requisitos-nao-funcionais.md)
 
 ## Contribuição

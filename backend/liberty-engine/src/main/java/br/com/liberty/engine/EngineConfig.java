@@ -1,5 +1,6 @@
 package br.com.liberty.engine;
 
+import br.com.liberty.engine.lifecycle.LifecycleService;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.route.PublicationSource;
 import br.com.liberty.engine.route.PublishedRoutes;
@@ -13,6 +14,9 @@ import br.com.liberty.engine.write.Transforms;
 import br.com.liberty.engine.write.WriteEngine;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
 import br.com.liberty.infrastructure.persistence.IdempotencyRepository;
+import br.com.liberty.infrastructure.persistence.IntegrationRepository;
+import br.com.liberty.infrastructure.persistence.IntegrationVersionRepository;
+import br.com.liberty.infrastructure.persistence.PublicationRepository;
 import br.com.liberty.infrastructure.persistence.TenantRepository;
 import br.com.liberty.scripts.pool.WorkerPool;
 import br.com.liberty.snapshot.SnapshotService;
@@ -114,5 +118,19 @@ public class EngineConfig {
       @Qualifier("tenantJdbcTemplate") NamedParameterJdbcTemplate jdbc,
       LibertyScriptProperties properties) {
     return new WorkerScriptHooks(pool, catalog, jdbc, properties);
+  }
+
+  @Bean
+  LifecycleService lifecycleService(
+      TenantRepository tenants,
+      IntegrationRepository integrations,
+      IntegrationVersionRepository versions,
+      PublicationRepository publications,
+      SnapshotService snapshots,
+      TenantCatalog catalog,
+      PublishedRoutes routes,
+      jakarta.persistence.EntityManager entityManager) {
+    return new LifecycleService(
+        tenants, integrations, versions, publications, snapshots, catalog, routes, entityManager);
   }
 }

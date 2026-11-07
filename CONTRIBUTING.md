@@ -24,17 +24,11 @@ Cada etapa do plano só termina quando cumpre:
 - Sem `System.out`, `printStackTrace` nem `console.log`; use o logger.
 - Dependências novas: versão fixa, licença compatível e sem CVE de severidade alta.
 
-## CI/CD (GitHub Actions)
+## CI (GitHub Actions)
 
 | Workflow | Quando | O que faz |
 | --- | --- | --- |
-| `ci.yml` | PR e push em `main` | `backend` (`mvnw verify`), `frontend` (`npm run verify` + `npm audit`), `secrets` (gitleaks), `dependency-review` (PR), `images` (build das imagens, varredura Grype, e em `main` push em GHCR com SBOM, proveniência e assinatura cosign sem chave), `deploy-dev` |
+| `ci.yml` | PR e push em `main` | `backend` (`mvnw verify`), `frontend` (`npm run verify` + `npm audit`) e `secrets` (gitleaks) |
 | `codeql.yml` | PR, push e semanal | Análise estática de Java e TypeScript (`security-extended`) |
-| `security.yml` | Diário, PRs que mudam dependências e manual | OWASP Dependency-Check, falha com CVSS 7 ou mais |
 
-Configuração única no repositório:
-
-- **Branch protection em `main`:** exigir PR, 1 aprovação, histórico linear e os checks `backend`, `frontend`, `secrets`, `dependency-review`, `images`, `analyze (java-kotlin)` e `analyze (javascript-typescript)`.
-- **Secret `NVD_API_KEY`:** necessário para `security.yml` (chave gratuita do NVD).
-- **Deploy em dev:** crie o ambiente `dev`, o secret `KUBE_CONFIG` nele e a variável `DEPLOY_DEV_ENABLED=true`. Os manifestos estão em `deploy/k8s`; o job só implanta imagens por digest com assinatura verificada.
-- **Dependências:** o Dependabot abre PRs semanais (Maven, npm, Actions e Docker). Actions e imagens base são fixadas por SHA/digest.
+Não há publicação de imagens nem deploy automático: os manifestos em `deploy/` ficam prontos para quando houver um ambiente de destino, e o CI de imagens, o Dependency-Check, o teste de carga noturno e o Dependabot foram removidos por ora. Atualize dependências manualmente (`mvn versions:display-dependency-updates`, `npm outdated`).

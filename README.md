@@ -119,7 +119,7 @@ Para reportar uma vulnerabilidade, veja [SECURITY.md](SECURITY.md).
 | Segredos e identidade | HashiCorp Vault (KV v2), JOSE/JWT, OIDC para usuários |
 | Frontend | React 19, TypeScript, Vite, Vitest |
 | Qualidade | JUnit 5, Testcontainers, ArchUnit, JaCoCo (80%), PIT, Checkstyle, Spotless, ESLint, Prettier |
-| Operação | Docker Compose, Kubernetes, Prometheus, Grafana, Jaeger, k6, GitHub Actions, CodeQL |
+| Operação | Docker Compose, Kubernetes, Prometheus, Grafana, Jaeger, k6, GitHub Actions (CI), CodeQL |
 
 ## Primeiros passos
 
@@ -181,7 +181,7 @@ Os nomes completos estão em [`.env.example`](.env.example); copie para `.env.lo
 | `frontend/` | React + TypeScript + Vite |
 | `deploy/` | Docker Compose local e manifestos Kubernetes |
 | `docs/` | ADRs, requisitos não funcionais e contrato da API |
-| `loadtest/` | Cenários k6 (executados toda noite pela esteira) |
+| `loadtest/` | Cenários k6 de carga (rodam manualmente) |
 | `scripts/` | Preparação do ambiente local e dos bancos de exemplo |
 
 Provas de conceito descartáveis ficam em `backend/poc` e só entram no build com `-Ppoc`.
@@ -195,7 +195,7 @@ make verify
 - Testes de unidade, de banco (SQL Server real) e de contrato HTTP de ponta a ponta, incluindo fuzzing de parâmetros e testes de falha com desfazimento de transação.
 - Testes de arquitetura (ArchUnit) garantem as fronteiras entre módulos e que todo endpoint é protegido.
 - Cobertura mínima de 80% de linhas por módulo; testes de mutação (PIT) no perfil `mutation`.
-- A esteira de CI executa build, testes, análise estática (CodeQL), varredura de segredos e de dependências, e carga noturna com k6. Requisitos e SLOs: [docs/requisitos-nao-funcionais.md](docs/requisitos-nao-funcionais.md).
+- A esteira de CI executa build, testes, análise estática (CodeQL) e varredura de segredos. Requisitos e SLOs: [docs/requisitos-nao-funcionais.md](docs/requisitos-nao-funcionais.md).
 
 ## Status e roteiro
 

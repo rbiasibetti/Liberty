@@ -38,6 +38,22 @@ class WorkerPoolTest {
         public String lookup(String table, String keyColumn, String keyJson, String valueColumn) {
           return keyJson.equals("1") ? "\"" + table + "." + valueColumn + "\"" : "null";
         }
+
+        @Override
+        public String fetch(String method, String url, String headersJson, String bodyJson) {
+          if (url.contains("proibido")) {
+            throw new IllegalArgumentException("Host não liberado para este tenant");
+          }
+          return "{\"status\":200,\"ok\":true,\"headers\":{},\"body\":\""
+              + method
+              + " "
+              + url
+              + " "
+              + headersJson.replace("\"", "'")
+              + " "
+              + bodyJson.replace("\\", "").replace("\"", "'")
+              + "\"}";
+        }
       };
 
   private static WorkerPool newPool(int size, int recycleRuns, int maxCalls) {
@@ -81,6 +97,37 @@ class WorkerPoolTest {
 
     assertThat(o.status()).isEqualTo(Status.OK);
     assertThat(o.json()).isEqualTo("{\"total\":5,\"nome\":\"ANA\"}");
+  }
+
+  @Test
+  void httpFetchGoesThroughTheParentWithMethodHeadersAndBody() {
+    Outcome o =
+        run(
+            "function main(i) { const r = http.fetch('https://api.exemplo.com/x', { method: 'POST',"
+                + " headers: { 'X-A': '1' }, body: { n: 1 } }); return { s: r.status, b: r.body }; }",
+            "{}");
+
+    assertThat(o.status()).isEqualTo(Status.OK);
+    assertThat(o.json())
+        .contains("POST https://api.exemplo.com/x")
+        .contains("X-A")
+        .contains("application/json")
+        .contains(":1}");
+  }
+
+  @Test
+  void httpFetchRefusalsSurfaceAsCatchableErrorsAndThereIsNoOtherNetwork() {
+    Outcome refused =
+        run(
+            "function main(i) { try { http.fetch('https://proibido.exemplo.com/'); } catch (e) { return e.message; } }",
+            "{}");
+    Outcome noFetchApi =
+        run(
+            "function main(i) { return [typeof fetch, typeof XMLHttpRequest, typeof WebSocket, typeof require].join(','); }",
+            "{}");
+
+    assertThat(refused.json()).contains("não liberado");
+    assertThat(noFetchApi.json()).isEqualTo("\"undefined,undefined,undefined,undefined\"");
   }
 
   @Test

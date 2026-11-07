@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import br.com.liberty.domain.tenancy.EnvironmentKind;
 import br.com.liberty.domain.tenancy.TenantId;
 import br.com.liberty.domain.tenancy.TenantScope;
+import br.com.liberty.engine.outbound.OutboundHttp;
+import br.com.liberty.engine.outbound.OutboundProperties;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.engine.route.RoutePattern;
@@ -44,6 +46,10 @@ class ScriptHooksTest {
   private static final TenantScope SCOPE =
       new TenantScope(new TenantId("scripts"), EnvironmentKind.HML);
   private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final OutboundHttp OUTBOUND =
+      new OutboundHttp(
+          new OutboundProperties(Duration.ofSeconds(5), Duration.ofSeconds(1), 1024, 1024, 2, 4),
+          (tenant, host) -> host.equals("api.exemplo.com"));
   private static final LibertyScriptProperties PROPS =
       new LibertyScriptProperties(
           1,
@@ -111,7 +117,8 @@ class ScriptHooksTest {
           + "{\"name\":\"todos\",\"sql\":\"SELECT id FROM dbo.tb_cliente CROSS JOIN (SELECT TOP 400 1 AS x FROM sys.all_objects) a\",\"params\":[]}]";
 
   private static WorkerScriptHooks hooks(Function<ScriptExecutor.Request, Outcome> executor) {
-    return new WorkerScriptHooks((request, host) -> executor.apply(request), catalog, jdbc, PROPS);
+    return new WorkerScriptHooks(
+        (request, host) -> executor.apply(request), catalog, jdbc, PROPS, OUTBOUND);
   }
 
   private static Outcome ok(String json) {
@@ -223,7 +230,8 @@ class ScriptHooksTest {
                         },
                         catalog,
                         jdbc,
-                        PROPS)
+                        PROPS,
+                        OUTBOUND)
                     .after(SCOPE, integration, Map.of(), null, in));
     assertThat(busy.status()).isEqualTo(429);
     assertThat(busy.headers()).containsKey("Retry-After");
@@ -257,7 +265,39 @@ class ScriptHooksTest {
 
   private static ScriptHost host() {
     return new ScriptHost(
-        SCOPE, integration("{}", QUERIES).snapshot().namedQueries(), catalog, jdbc);
+        SCOPE,
+        integration("{}", QUERIES).snapshot().namedQueries(),
+        catalog,
+        jdbc,
+        OUTBOUND.session("acme", true));
+  }
+
+  @Test
+  void httpFetchInTheHostIsSimulatedInTheSandboxAndStillEnforcesTheAllowList() {
+    JsonNode out = JSON.readTree(host().fetch("GET", "https://api.exemplo.com/x", "{}", "null"));
+
+    assertThat(out.path("simulated").asBoolean()).isTrue();
+    assertThatThrownBy(() -> host().fetch("GET", "https://outro.exemplo.com/", "{}", "null"))
+        .hasMessageContaining("não liberado");
+  }
+
+  @Test
+  void scriptsThatCallHttpFetchGetTheOutboundDeadlineOnTop() {
+    var seen = new java.util.concurrent.atomic.AtomicReference<Duration>();
+    var integration =
+        integration("{\"afterExecute\":\"function f(i){ return http.fetch('x'); }\"}", "[]");
+    var plain = integration("{\"afterExecute\":\"function f(i){ return i; }\"}", "[]");
+    var hooks =
+        hooks(
+            r -> {
+              seen.set(r.timeout());
+              return ok("null");
+            });
+
+    hooks.after(SCOPE, integration, Map.of(), null, body("{}"));
+    assertThat(seen.get()).isEqualTo(Duration.ofSeconds(6));
+    hooks.after(SCOPE, plain, Map.of(), null, body("{}"));
+    assertThat(seen.get()).isEqualTo(Duration.ofSeconds(1));
   }
 
   @Test

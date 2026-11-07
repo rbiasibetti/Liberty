@@ -390,6 +390,43 @@ paths:
         "204":
           description: Retirado
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/http-hosts:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: listHttpHosts
+      summary: Hosts que os scripts do tenant podem chamar com http.fetch
+      responses:
+        "200":
+          description: Lista de permissão do tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HttpHost" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/http-hosts/{host}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - name: host
+        in: path
+        required: true
+        description: Nome DNS em minúsculas, com ":porta" quando não for a 443; IP não é aceito
+        schema: { type: string }
+    put:
+      operationId: allowHttpHost
+      summary: Libera o host para o tenant (idempotente)
+      responses:
+        "204":
+          description: Liberado
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: removeHttpHost
+      summary: Retira o host da lista do tenant
+      responses:
+        "204":
+          description: Retirado
+        default: { $ref: "#/components/responses/Problem" }
   /api/v1/tenants/{slug}/environments/{env}/openapi.json:
     parameters:
       - $ref: "#/components/parameters/Slug"
@@ -594,6 +631,13 @@ components:
         dbUsername: { type: string }
         poolMax: { type: integer, format: int32 }
         status: { type: string }
+    HttpHost:
+      type: object
+      required: [host, createdBy, createdAt]
+      properties:
+        host: { type: string }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
     ConnectionRequest:
       type: object
       required: [jdbcUrl, dbUsername]

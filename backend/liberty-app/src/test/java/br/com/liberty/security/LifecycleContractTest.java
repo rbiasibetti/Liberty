@@ -102,6 +102,7 @@ class LifecycleContractTest {
   @Autowired TenantConnectionRepository connections;
   @Autowired ApiClientRepository clients;
   @Autowired UserRoleRepository roles;
+  @Autowired br.com.liberty.infrastructure.persistence.TenantHttpHostRepository httpHosts;
   @Autowired PasswordEncoder encoder;
 
   private static boolean seeded;
@@ -120,6 +121,9 @@ class LifecycleContractTest {
       st.execute("INSERT INTO dbo.tb_cliente VALUES ('C1', N'Ana'), ('C2', N'Bia')");
     }
     long acme = tenants.save(new TenantEntity("acme", "Acme", "STANDARD")).getId();
+    httpHosts.save(
+        new br.com.liberty.infrastructure.persistence.TenantHttpHostEntity(
+            acme, "api.exemplo.com", "teste"));
     for (EnvironmentKind env : EnvironmentKind.values()) {
       connections.save(
           new TenantConnectionEntity(
@@ -426,6 +430,54 @@ class LifecycleContractTest {
       rs.next();
       assertThat(rs.getInt(1)).isZero();
     }
+  }
+
+  private String httpWrite(String key, String script) {
+    return "{\"schemaVersion\":1,\"integration\":{\"key\":\""
+        + key
+        + "\",\"name\":\"x\",\"method\":\"POST\",\"route\":\"/"
+        + key
+        + "\"},\"request\":{\"params\":[],\"bodySchema\":{\"type\":\"object\"}},\"scripts\":{\"beforeExecute\":\""
+        + script
+        + "\"},\"operation\":{\"type\":\"INSERT\",\"write\":{\"root\":{\"table\":\"dbo.tb_cliente\","
+        + "\"fields\":[{\"column\":\"codigo\",\"source\":\"/codigo\"},{\"column\":\"nome\",\"source\":\"/nome\"}]}}}}";
+  }
+
+  @Test
+  void sandboxSimulatesHttpFetchButStillEnforcesTheTenantAllowList() throws Exception {
+    for (String key : java.util.List.of("sbx-http", "sbx-http-nega")) {
+      call(
+          post("/api/v1/tenants/acme/integrations"),
+          "ana",
+          "{\"key\":\""
+              + key
+              + "\",\"name\":\"x\",\"method\":\"POST\",\"route\":\"/"
+              + key
+              + "\"}");
+    }
+    call(
+        put(base("sbx-http") + "/draft"),
+        "ana",
+        httpWrite(
+            "sbx-http",
+            "function beforeExecute(i){ const r = http.fetch('https://api.exemplo.com/x',"
+                + " {method:'POST', body:{a:1}}); return { codigo: 'H' + r.status, nome: String(r.simulated) }; }"));
+    call(
+        put(base("sbx-http-nega") + "/draft"),
+        "ana",
+        httpWrite(
+            "sbx-http-nega",
+            "function beforeExecute(i){ http.fetch('https://nao-liberado.exemplo.com/'); return i; }"));
+
+    var allowed = call(post(base("sbx-http") + "/versions/1/sandbox"), "ana", "{\"body\":{}}");
+    var denied = call(post(base("sbx-http-nega") + "/versions/1/sandbox"), "ana", "{\"body\":{}}");
+
+    assertThat(allowed.getStatus()).as(allowed.getContentAsString()).isEqualTo(200);
+    assertThat(json(allowed)).containsEntry("succeeded", true).containsEntry("status", 201L);
+    assertThat(json(denied)).containsEntry("succeeded", false).containsEntry("status", 500L);
+    assertThat(denied.getContentAsString())
+        .as("o motivo técnico não vaza")
+        .doesNotContain("nao-liberado");
   }
 
   @Test

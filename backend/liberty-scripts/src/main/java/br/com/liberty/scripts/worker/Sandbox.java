@@ -23,8 +23,8 @@ import org.graalvm.polyglot.io.IOAccess;
 
 /**
  * Executa um script num {@link Context} novo por execução: sem Java, arquivos, rede, threads,
- * processos nem ambiente; só a API {@code db}/{@code fail} injetada pelo pai. Prazo por
- * cancelamento e limite de instruções; saída e resultado limitados.
+ * processos nem ambiente; só a API {@code db}/{@code http}/{@code fail} injetada pelo pai. Prazo
+ * por cancelamento e limite de instruções; saída e resultado limitados.
  */
 final class Sandbox implements AutoCloseable {
 
@@ -39,6 +39,24 @@ final class Sandbox implements AutoCloseable {
           named: (name, params) => JSON.parse(call(() => h.named(String(name), JSON.stringify(params || {})))),
           lookup: (table, keyColumn, key, valueColumn) =>
             JSON.parse(call(() => h.lookup(String(table), String(keyColumn), JSON.stringify(key), String(valueColumn))))
+        });
+        globalThis.http = Object.freeze({
+          fetch: (url, options) => {
+            const o = options || {};
+            const headers = Object.assign({}, o.headers || {});
+            let body = null;
+            if (o.body !== undefined && o.body !== null) {
+              if (typeof o.body === 'string') {
+                body = o.body;
+              } else {
+                body = JSON.stringify(o.body);
+                if (!Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')) {
+                  headers['Content-Type'] = 'application/json';
+                }
+              }
+            }
+            return JSON.parse(call(() => h.fetch(String(o.method || 'GET'), String(url), JSON.stringify(headers), JSON.stringify(body))));
+          }
         });
         globalThis.fail = (status, message) => h.fail(status | 0, String(message));
       })(__host);

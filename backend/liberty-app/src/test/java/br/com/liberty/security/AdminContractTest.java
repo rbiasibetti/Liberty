@@ -325,6 +325,43 @@ class AdminContractTest {
   // ---------- usuários e papéis ----------
 
   @Test
+  void theOutboundHostAllowListIsManagedByThePlatformAdministratorOnly() throws Exception {
+    String path = "/api/v1/platform/tenants/acme/http-hosts/";
+
+    assertThat(call(put(path + "api.exemplo.com"), oidc.userToken("publisher"), null).getStatus())
+        .isEqualTo(403);
+    assertThat(admin(put(path + "api.exemplo.com"), null).getStatus()).isEqualTo(204);
+    assertThat(admin(put(path + "api.exemplo.com"), null).getStatus())
+        .as("idempotente")
+        .isEqualTo(204);
+    assertThat(admin(put(path + "pagamentos.exemplo.com:8443"), null).getStatus()).isEqualTo(204);
+    String listed =
+        admin(get("/api/v1/platform/tenants/acme/http-hosts"), null).getContentAsString();
+    assertThat(listed)
+        .contains("api.exemplo.com", "pagamentos.exemplo.com:8443")
+        .contains("\"createdBy\":\"admin\"");
+    for (String bad :
+        List.of(
+            "127.0.0.1",
+            "10.0.0.1:443",
+            "localhost",
+            "Api.Exemplo.com",
+            "-x.com",
+            "a..com",
+            "exemplo.com.",
+            "x.com:1")) {
+      assertThat(admin(put(path + bad), null).getStatus()).as(bad).isEqualTo(400);
+    }
+    assertThat(admin(delete(path + "api.exemplo.com"), null).getStatus()).isEqualTo(204);
+    assertThat(admin(get("/api/v1/platform/tenants/acme/http-hosts"), null).getContentAsString())
+        .doesNotContain("\"api.exemplo.com\"");
+    assertThat(
+            admin(put("/api/v1/platform/tenants/inexistente/http-hosts/api.exemplo.com"), null)
+                .getStatus())
+        .isEqualTo(404);
+  }
+
+  @Test
   void rolesGrantedByTheAdministratorTakeEffectAtOnce() throws Exception {
     assertThat(
             call(get("/api/v1/tenants/acme/integrations"), oidc.userToken("novato"), null)

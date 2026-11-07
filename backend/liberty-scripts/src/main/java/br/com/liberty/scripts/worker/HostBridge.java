@@ -46,6 +46,11 @@ public final class HostBridge {
   }
 
   @HostAccess.Export
+  public String fetch(String method, String url, String headersJson, String bodyJson) {
+    return channel.apply("fetch", new String[] {method, url, headersJson, bodyJson});
+  }
+
+  @HostAccess.Export
   public void fail(int status, String message) {
     int http = status >= 400 && status <= 499 ? status : 422;
     String text = message.length() > 300 ? message.substring(0, 300) : message;

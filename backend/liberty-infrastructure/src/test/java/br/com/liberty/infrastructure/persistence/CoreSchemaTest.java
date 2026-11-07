@@ -32,7 +32,8 @@ class CoreSchemaTest {
           "int_idempotency",
           "int_audit_execution",
           "int_audit_payload",
-          "int_export_job");
+          "int_export_job",
+          "int_tenant_http_host");
 
   private static final int CHECK_OR_FK = 547;
   private static final int UNIQUE_CONSTRAINT = 2627;
@@ -46,7 +47,7 @@ class CoreSchemaTest {
   static void migrate() throws SQLException {
     db = CoreTestDatabase.create();
     Flyway flyway = flyway();
-    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(3);
+    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(4);
     connection = DriverManager.getConnection(db.url(), db.user(), db.password());
   }
 
@@ -139,7 +140,7 @@ class CoreSchemaTest {
   }
 
   @Test
-  void createsExactlyTheElevenPlatformTables() throws SQLException {
+  void createsExactlyThePlatformTables() throws SQLException {
     Set<String> found = new HashSet<>();
     try (Statement st = connection.createStatement();
         ResultSet rs = st.executeQuery("SELECT name FROM sys.tables WHERE name LIKE 'int[_]%'")) {
@@ -169,6 +170,23 @@ class CoreSchemaTest {
   void noForeignKeyCascades() throws SQLException {
     assertThat(scalar("SELECT COUNT(*) FROM sys.foreign_keys WHERE delete_referential_action <> 0"))
         .isZero();
+  }
+
+  @Test
+  void outboundHostsAreLowercaseDnsNamesNeverIpLiterals() throws SQLException {
+    long tenant = tenant();
+    String insert =
+        "INSERT INTO int_tenant_http_host (tenant_id, host, created_by) VALUES (?, ?, 'admin')";
+    for (String bad :
+        new String[] {
+          "API.exemplo.com", "127.0.0.1", "10.1.2.3:443", "a b.com", ".x.com", "x.com."
+        }) {
+      assertSqlError(() -> sql(insert, tenant, bad), CHECK_OR_FK);
+    }
+    sql(insert, tenant, "api.exemplo.com");
+    sql(insert, tenant, "pagamentos.exemplo.com:8443");
+    assertSqlError(() -> sql(insert, tenant, "api.exemplo.com"), UNIQUE_CONSTRAINT);
+    assertSqlError(() -> sql(insert, 999_999L, "outro.exemplo.com"), CHECK_OR_FK);
   }
 
   @Test

@@ -171,6 +171,8 @@ describe('scriptTypings', () => {
     expect(schemaToTs({ type: 'weird' })).toBe('unknown');
     const typings = scriptTypings({ type: 'object', properties: { x: { type: 'string' } } });
     expect(typings).toContain('declare const db');
+    expect(typings).toContain('declare const http');
+    expect(typings).toContain('interface HttpResponse');
     expect(typings).toContain('declare function fail(status: number, message: string): never');
     expect(typings).toContain('interface BeforeInput');
     expect(typings).toContain('"x"?: string');

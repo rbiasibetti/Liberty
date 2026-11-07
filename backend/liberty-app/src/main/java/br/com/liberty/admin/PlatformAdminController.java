@@ -108,6 +108,28 @@ class PlatformAdminController {
     return ResponseEntity.noContent().build();
   }
 
+  @GetMapping("/http-hosts")
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+  List<TenantAdminService.HttpHostView> httpHosts(@PathVariable String slug) {
+    return service.httpHosts(slug);
+  }
+
+  @PutMapping("/http-hosts/{host:.+}")
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+  ResponseEntity<Void> allowHttpHost(
+      @PathVariable String slug, @PathVariable String host, Authentication admin) {
+    service.allowHttpHost(slug, host, admin.getName());
+    return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/http-hosts/{host:.+}")
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+  ResponseEntity<Void> removeHttpHost(
+      @PathVariable String slug, @PathVariable String host, Authentication admin) {
+    service.removeHttpHost(slug, host, admin.getName());
+    return ResponseEntity.noContent().build();
+  }
+
   private static EnvironmentKind environment(String env) {
     try {
       return EnvironmentKind.valueOf(env.toUpperCase(Locale.ROOT));

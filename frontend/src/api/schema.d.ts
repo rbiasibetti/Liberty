@@ -433,6 +433,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/tenants/{slug}/http-hosts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** Hosts que os scripts do tenant podem chamar com http.fetch */
+        get: operations["listHttpHosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/http-hosts/{host}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                /** @description Nome DNS em minúsculas, com ":porta" quando não for a 443; IP não é aceito */
+                host: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Libera o host para o tenant (idempotente) */
+        put: operations["allowHttpHost"];
+        post?: never;
+        /** Retira o host da lista do tenant */
+        delete: operations["removeHttpHost"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/{slug}/environments/{env}/openapi.json": {
         parameters: {
             query?: never;
@@ -615,6 +656,12 @@ export interface components {
             /** Format: int32 */
             poolMax: number;
             status: string;
+        };
+        HttpHost: {
+            host: string;
+            createdBy: string;
+            /** Format: date-time */
+            createdAt: string;
         };
         ConnectionRequest: {
             jdbcUrl: string;
@@ -1293,6 +1340,75 @@ export interface operations {
                 slug: components["parameters"]["Slug"];
                 sub: string;
                 role: components["schemas"]["TenantRole"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retirado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listHttpHosts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista de permissão do tenant */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HttpHost"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    allowHttpHost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                /** @description Nome DNS em minúsculas, com ":porta" quando não for a 443; IP não é aceito */
+                host: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liberado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeHttpHost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                /** @description Nome DNS em minúsculas, com ":porta" quando não for a 443; IP não é aceito */
+                host: string;
             };
             cookie?: never;
         };

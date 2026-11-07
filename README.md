@@ -217,7 +217,8 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Telas de auditoria e de administração do tenant (conexões, clientes OAuth2, usuários e papéis)
 - [x] Testes de ponta a ponta no navegador (Playwright), teste de acesso entre tenants em todos os endpoints, runbooks e restauração do core testada
 - [ ] Liberação: carga (k6), DAST, pentest externo e piloto, ver [Portão 2](docs/portao-2.md)
-- [ ] Fase 2 (recursos avançados)
+- [x] HTTP de saída dos scripts (`http.fetch`) com lista de hosts por tenant e defesa contra SSRF
+- [ ] Fase 2 (demais recursos: filas, exportações e DELETE, painel em tempo real)
 
 ## Documentação
 

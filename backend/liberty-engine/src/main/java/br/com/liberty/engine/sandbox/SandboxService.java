@@ -4,6 +4,7 @@ import br.com.liberty.domain.tenancy.EnvironmentKind;
 import br.com.liberty.domain.tenancy.TenantId;
 import br.com.liberty.domain.tenancy.TenantScope;
 import br.com.liberty.engine.lifecycle.LifecycleService;
+import br.com.liberty.engine.outbound.OutboundMode;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.route.PublishedIntegration;
@@ -28,9 +29,10 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Sandbox: executa uma versão (rascunho, em revisão ou publicada) contra o banco de HML do tenant
  * com a transação sempre desfeita, devolvendo o resultado, o rastro de SQL e o console dos scripts.
- * Só HML; PRD nunca. Os scripts só leem (o motor não oferece nenhum efeito externo), então nada
- * fora da transação desfeita é tocado. Falhas da integração (validação, conflito, script) não são
- * erros do sandbox: voltam no resultado, junto do rastro, para o integrador depurar.
+ * Só HML; PRD nunca. Os scripts só leem e o {@code http.fetch} é simulado (valida tudo, não envia
+ * nada), então nada fora da transação desfeita é tocado. Falhas da integração (validação, conflito,
+ * script) não são erros do sandbox: voltam no resultado, junto do rastro, para o integrador
+ * depurar.
  */
 public final class SandboxService {
 
@@ -108,7 +110,8 @@ public final class SandboxService {
 
     SqlTrace trace = new SqlTrace();
     long start = System.nanoTime();
-    try (ScriptLogs logs = ScriptLogs.capture()) {
+    try (ScriptLogs logs = ScriptLogs.capture();
+        OutboundMode mode = OutboundMode.simulate()) {
       try {
         int status;
         JsonNode result;

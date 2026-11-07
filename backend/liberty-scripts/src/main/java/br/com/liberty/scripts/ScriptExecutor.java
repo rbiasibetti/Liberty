@@ -36,6 +36,13 @@ public interface ScriptExecutor {
 
     /** Valor de uma coluna da linha que tem a chave dada; JSON escalar ou {@code null}. */
     String lookup(String table, String keyColumn, String keyJson, String valueColumn);
+
+    /**
+     * Chamada HTTP de saída ({@code http.fetch}); {@code bodyJson} é um JSON string ou {@code
+     * null}. Devolve {@code {status, ok, headers, body}} em JSON; recusas lançam exceção de
+     * mensagem segura.
+     */
+    String fetch(String method, String url, String headersJson, String bodyJson);
   }
 
   /** O pool está cheio e a espera por um trabalhador acabou. */

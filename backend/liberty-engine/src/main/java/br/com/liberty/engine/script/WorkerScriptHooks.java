@@ -2,6 +2,8 @@ package br.com.liberty.engine.script;
 
 import br.com.liberty.domain.tenancy.TenantScope;
 import br.com.liberty.engine.audit.RequestTimings;
+import br.com.liberty.engine.outbound.OutboundHttp;
+import br.com.liberty.engine.outbound.OutboundMode;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
@@ -34,17 +36,20 @@ public final class WorkerScriptHooks implements ScriptHooks {
   private final TenantCatalog catalog;
   private final NamedParameterJdbcTemplate jdbc;
   private final LibertyScriptProperties properties;
+  private final OutboundHttp outbound;
   private final Map<String, Semaphore> bulkheads = new ConcurrentHashMap<>();
 
   public WorkerScriptHooks(
       ScriptExecutor executor,
       TenantCatalog catalog,
       NamedParameterJdbcTemplate jdbc,
-      LibertyScriptProperties properties) {
+      LibertyScriptProperties properties,
+      OutboundHttp outbound) {
     this.executor = executor;
     this.catalog = catalog;
     this.jdbc = jdbc;
     this.properties = properties;
+    this.outbound = outbound;
   }
 
   @Override
@@ -116,9 +121,18 @@ public final class WorkerScriptHooks implements ScriptHooks {
               source,
               function,
               MAPPER.writeValueAsString(input),
-              properties.timeout(),
+              // quem chama http.fetch ganha o prazo da chamada de saída somado ao do script
+              source.contains("http.fetch")
+                  ? properties.timeout().plus(outbound.timeout())
+                  : properties.timeout(),
               properties.maxStatements());
-      var host = new ScriptHost(scope, integration.snapshot().namedQueries(), catalog, jdbc);
+      var host =
+          new ScriptHost(
+              scope,
+              integration.snapshot().namedQueries(),
+              catalog,
+              jdbc,
+              outbound.session(scope.tenant().value(), OutboundMode.simulated()));
       long start = System.nanoTime();
       ScriptExecutor.Outcome outcome = executor.run(request, host);
       RequestTimings.addScript(System.nanoTime() - start);

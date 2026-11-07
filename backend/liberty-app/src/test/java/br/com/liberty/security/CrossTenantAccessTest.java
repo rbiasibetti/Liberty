@@ -124,7 +124,8 @@ class CrossTenantAccessTest {
           Map.entry("table", "dbo.tb_pedido"),
           Map.entry("clientId", "erp"),
           Map.entry("sub", "alguem"),
-          Map.entry("role", "VIEWER"));
+          Map.entry("role", "VIEWER"),
+          Map.entry("host", "api.exemplo.com"));
 
   @SuppressWarnings("unchecked")
   private static List<Endpoint> endpoints() throws IOException {

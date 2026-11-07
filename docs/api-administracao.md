@@ -55,3 +55,6 @@ Base `/api/v1/platform/tenants/{slug}`; exige o papel de administrador da plataf
 | `GET /users` | Usuários e papéis |
 | `PUT /users/{sub}/roles/{role}` | Concede `VIEWER`, `INTEGRATOR` ou `PUBLISHER` |
 | `DELETE /users/{sub}/roles/{role}` | Retira o papel |
+| `GET /http-hosts` | Hosts que os scripts do tenant podem chamar com `http.fetch` |
+| `PUT /http-hosts/{host}` | Libera um nome DNS em minúsculas (com `:porta` se não for 443); IP, maiúsculas e ponto final são recusados (400). Idempotente |
+| `DELETE /http-hosts/{host}` | Retira o host; vale em até 5 s |

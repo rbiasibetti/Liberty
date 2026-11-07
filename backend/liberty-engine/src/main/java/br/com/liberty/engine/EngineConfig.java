@@ -4,6 +4,10 @@ import br.com.liberty.engine.audit.AuditMaintenance;
 import br.com.liberty.engine.audit.AuditRecorder;
 import br.com.liberty.engine.audit.LibertyAuditProperties;
 import br.com.liberty.engine.lifecycle.LifecycleService;
+import br.com.liberty.engine.outbound.HostAllowList;
+import br.com.liberty.engine.outbound.OutboundHttp;
+import br.com.liberty.engine.outbound.OutboundProperties;
+import br.com.liberty.engine.outbound.RepositoryHostAllowList;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.route.PublicationSource;
 import br.com.liberty.engine.route.PublishedRoutes;
@@ -24,6 +28,7 @@ import br.com.liberty.infrastructure.persistence.IdempotencyRepository;
 import br.com.liberty.infrastructure.persistence.IntegrationRepository;
 import br.com.liberty.infrastructure.persistence.IntegrationVersionRepository;
 import br.com.liberty.infrastructure.persistence.PublicationRepository;
+import br.com.liberty.infrastructure.persistence.TenantHttpHostRepository;
 import br.com.liberty.infrastructure.persistence.TenantRepository;
 import br.com.liberty.scripts.pool.WorkerPool;
 import br.com.liberty.snapshot.SnapshotService;
@@ -41,7 +46,8 @@ import org.springframework.transaction.support.TransactionTemplate;
   LibertyEngineProperties.class,
   LibertyScriptProperties.class,
   LibertyAuditProperties.class,
-  LibertyLimitProperties.class
+  LibertyLimitProperties.class,
+  OutboundProperties.class
 })
 public class EngineConfig {
 
@@ -124,12 +130,23 @@ public class EngineConfig {
   }
 
   @Bean
+  HostAllowList httpHostAllowList(TenantHttpHostRepository repository) {
+    return new RepositoryHostAllowList(repository);
+  }
+
+  @Bean(destroyMethod = "close")
+  OutboundHttp outboundHttp(OutboundProperties properties, HostAllowList allowList) {
+    return new OutboundHttp(properties, allowList);
+  }
+
+  @Bean
   ScriptHooks scriptHooks(
       WorkerPool pool,
       TenantCatalog catalog,
       @Qualifier("tenantJdbcTemplate") NamedParameterJdbcTemplate jdbc,
-      LibertyScriptProperties properties) {
-    return new WorkerScriptHooks(pool, catalog, jdbc, properties);
+      LibertyScriptProperties properties,
+      OutboundHttp outbound) {
+    return new WorkerScriptHooks(pool, catalog, jdbc, properties, outbound);
   }
 
   @Bean

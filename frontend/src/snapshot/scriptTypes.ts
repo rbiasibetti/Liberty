@@ -53,6 +53,15 @@ declare const db: {
   /** Valor de uma coluna da linha cuja coluna-chave vale a chave, ou null. */
   lookup(table: string, keyColumn: string, key: unknown, valueColumn: string): unknown;
 };
+interface HttpResponse { status: number; ok: boolean; headers: Record<string, string>; body: string; simulated?: boolean }
+declare const http: {
+  /**
+   * Chamada HTTPS de saída, só para hosts liberados ao tenant pelo administrador. Não segue
+   * redirecionamentos, tem prazo de 5 s e limite de tamanho; no sandbox nada é enviado e a
+   * resposta é simulada (status 200, simulated: true). Objetos em body viram JSON.
+   */
+  fetch(url: string, options?: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; headers?: Record<string, string>; body?: string | Record<string, unknown> | unknown[] }): HttpResponse;
+};
 /** Recusa a operação com um status 4xx e uma mensagem. */
 declare function fail(status: number, message: string): never;
 `;

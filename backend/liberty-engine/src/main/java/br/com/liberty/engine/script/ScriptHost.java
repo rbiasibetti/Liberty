@@ -2,6 +2,7 @@ package br.com.liberty.engine.script;
 
 import br.com.liberty.domain.tenancy.TenantContext;
 import br.com.liberty.domain.tenancy.TenantScope;
+import br.com.liberty.engine.outbound.OutboundHttp;
 import br.com.liberty.engine.read.ValueBinder;
 import br.com.liberty.infrastructure.catalog.ColumnInfo;
 import br.com.liberty.infrastructure.catalog.SqlIdentifiers;
@@ -45,16 +46,19 @@ final class ScriptHost implements ScriptExecutor.HostCalls {
   private final Map<String, NamedQuery> queries = new HashMap<>();
   private final TenantCatalog catalog;
   private final NamedParameterJdbcTemplate jdbc;
+  private final OutboundHttp.Session outbound;
 
   ScriptHost(
       TenantScope scope,
       List<NamedQuery> namedQueries,
       TenantCatalog catalog,
-      NamedParameterJdbcTemplate jdbc) {
+      NamedParameterJdbcTemplate jdbc,
+      OutboundHttp.Session outbound) {
     this.scope = scope;
     namedQueries.forEach(q -> queries.put(q.name(), q));
     this.catalog = catalog;
     this.jdbc = jdbc;
+    this.outbound = outbound;
   }
 
   @Override
@@ -163,6 +167,11 @@ final class ScriptHost implements ScriptExecutor.HostCalls {
                       }
                       return json;
                     }));
+  }
+
+  @Override
+  public String fetch(String method, String url, String headersJson, String bodyJson) {
+    return outbound.fetch(method, url, headersJson, bodyJson);
   }
 
   private static Object scalar(JsonNode node) {

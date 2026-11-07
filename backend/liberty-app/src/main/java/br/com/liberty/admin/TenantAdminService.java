@@ -12,6 +12,8 @@ import br.com.liberty.infrastructure.persistence.ApiClientRepository;
 import br.com.liberty.infrastructure.persistence.TenantConnectionEntity;
 import br.com.liberty.infrastructure.persistence.TenantConnectionRepository;
 import br.com.liberty.infrastructure.persistence.TenantEntity;
+import br.com.liberty.infrastructure.persistence.TenantHttpHostEntity;
+import br.com.liberty.infrastructure.persistence.TenantHttpHostRepository;
 import br.com.liberty.infrastructure.persistence.TenantRepository;
 import br.com.liberty.infrastructure.persistence.UserRoleEntity;
 import br.com.liberty.infrastructure.persistence.UserRoleRepository;
@@ -47,6 +49,10 @@ class TenantAdminService {
   private static final Pattern CLIENT_ID = Pattern.compile("[a-z0-9][a-z0-9-]{2,60}");
   private static final Pattern SCOPE = Pattern.compile("integration:execute:[a-z0-9-]{1,100}");
   private static final Pattern DB_USER = Pattern.compile("[A-Za-z0-9_.@-]{1,128}");
+  private static final Pattern HTTP_HOST =
+      Pattern.compile(
+          "[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?)+(:[0-9]{2,5})?");
+  private static final Pattern IPV4_LIKE = Pattern.compile("[0-9.]+(:[0-9]+)?");
   private static final Pattern SUB = Pattern.compile("[A-Za-z0-9._@:-]{1,200}");
   private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -70,10 +76,13 @@ class TenantAdminService {
 
   record UserView(String sub, List<String> roles) {}
 
+  record HttpHostView(String host, String createdBy, Instant createdAt) {}
+
   private final TenantRepository tenants;
   private final TenantConnectionRepository connections;
   private final ApiClientRepository clients;
   private final UserRoleRepository roles;
+  private final TenantHttpHostRepository httpHosts;
   private final SecretProvider secrets;
   private final SecretWriter secretWriter;
   private final TenantPoolRegistry pools;
@@ -85,6 +94,7 @@ class TenantAdminService {
       TenantConnectionRepository connections,
       ApiClientRepository clients,
       UserRoleRepository roles,
+      TenantHttpHostRepository httpHosts,
       SecretProvider secrets,
       SecretWriter secretWriter,
       TenantPoolRegistry pools,
@@ -94,6 +104,7 @@ class TenantAdminService {
     this.connections = connections;
     this.clients = clients;
     this.roles = roles;
+    this.httpHosts = httpHosts;
     this.secrets = secrets;
     this.secretWriter = secretWriter;
     this.pools = pools;
@@ -310,6 +321,49 @@ class TenantAdminService {
             entity -> {
               roles.delete(entity);
               LOG.info("Papel {} retirado de {} em {} por {}", role, sub, slug, admin);
+            });
+  }
+
+  // ---- hosts de saída (http.fetch) -------------------------------------------------------
+
+  @Transactional(readOnly = true)
+  List<HttpHostView> httpHosts(String slug) {
+    TenantEntity tenant = tenant(slug);
+    return httpHosts.findByIdTenantIdOrderByIdHost(tenant.getId()).stream()
+        .map(h -> new HttpHostView(h.getId().host(), h.getCreatedBy(), h.getCreatedAt()))
+        .toList();
+  }
+
+  @Transactional
+  void allowHttpHost(String slug, String host, String admin) {
+    TenantEntity tenant = tenant(slug);
+    String normalized = host == null ? "" : host;
+    if (normalized.length() > 260
+        || IPV4_LIKE.matcher(normalized).matches()
+        || !HTTP_HOST.matcher(normalized).matches()) {
+      throw ProblemException.validation(
+          List.of(
+              new Violation(
+                  "host",
+                  "invalid_value",
+                  "Use um nome DNS em minúsculas, com :porta se não for a 443; IP não é aceito")));
+    }
+    var key = new TenantHttpHostEntity.Key(tenant.getId(), normalized);
+    if (httpHosts.findById(key).isEmpty()) {
+      httpHosts.save(new TenantHttpHostEntity(tenant.getId(), normalized, admin));
+      LOG.info("Host de saída {} liberado em {} por {}", normalized, slug, admin);
+    }
+  }
+
+  @Transactional
+  void removeHttpHost(String slug, String host, String admin) {
+    TenantEntity tenant = tenant(slug);
+    httpHosts
+        .findById(new TenantHttpHostEntity.Key(tenant.getId(), host))
+        .ifPresent(
+            entity -> {
+              httpHosts.delete(entity);
+              LOG.info("Host de saída {} retirado de {} por {}", host, slug, admin);
             });
   }
 

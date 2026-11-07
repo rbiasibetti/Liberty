@@ -41,6 +41,7 @@ Legenda de estado: **ok** = controle implementado e testado; **parcial** = imple
 | Ameaça | Controle | Estado |
 | --- | --- | --- |
 | Abuso da URL de conexão (SSRF, arquivos, código) | Política de URL: só SQL Server, `encrypt=true`, propriedades perigosas proibidas; também no teste de conexão. | ok |
+| SSRF pelo `http.fetch` dos scripts | Só HTTPS, só hosts liberados pelo administrador por tenant (nome DNS, nunca IP), todo endereço resolvido tem de ser público (checado na hora da conexão, sem janela de reassociação de DNS), sem redirecionamento, proxy nem cookies, prazo e tamanhos limitados, sandbox só simula. ADR 0034; suíte `OutboundHttpTest`. | ok |
 | Vazamento da senha do banco | Só no Vault; o core guarda a referência; nunca em resposta, log ou erro. | ok |
 | Mistura de conexões entre tenants | Roteamento por contexto de tenant, um pool por tenant; teste com 50 tenants concorrentes. ADR 0020. | ok |
 | Gatilho do cliente com efeito externo (`xp_cmdshell`, e-mail) | Fora do nosso controle: o usuário do banco do tenant não deve ter esses privilégios. | falta (exigir no onboarding) |

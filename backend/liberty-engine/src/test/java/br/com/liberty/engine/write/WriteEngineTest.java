@@ -824,6 +824,60 @@ class WriteEngineTest {
   }
 
   @Test
+  void transformsNormalizeValuesBeforeTheyReachTheDatabase() throws SQLException {
+    var integration =
+        integration(
+            "INSERT",
+            "/t",
+            "[]",
+            null,
+            j(
+                "{'table':'dbo.tb_pedido','fields':[{'column':'numero','source':'/n','transforms':[{'fn':'trim'},{'fn':'upper'}]},"
+                    + "{'column':'cliente_id','source':'/c','transforms':[{'fn':'digits'}]},"
+                    + "{'column':'vl_total','source':'/v','transforms':[{'fn':'toDecimal','args':[2]}]},"
+                    + "{'column':'status','source':'/s','transforms':[{'fn':'map','args':[{'A':'ABERTO','P':'PAGO'}]}]},"
+                    + "{'column':'obs','source':'/o','transforms':[{'fn':'default','args':['sem obs']}]}]}"),
+            "");
+    var catalog =
+        new TenantCatalog(
+            new JdbcCatalogIntrospector(registry), Duration.ofMinutes(5), Duration.ofSeconds(30));
+    var jdbc = new NamedParameterJdbcTemplate(new TenantRoutingDataSource(registry));
+    var withTransforms =
+        new WriteEngine(
+            catalog,
+            jdbc,
+            new TransactionTemplate(
+                new DataSourceTransactionManager(jdbc.getJdbcTemplate().getDataSource())),
+            idempotency,
+            new Transforms(),
+            50_000);
+    byte[] ok =
+        "{\"n\":\"  ab-1 \",\"c\":\"C-77\",\"v\":\"10.005\",\"s\":\"P\"}"
+            .getBytes(StandardCharsets.UTF_8);
+    byte[] bad =
+        "{\"n\":\"x\",\"c\":\"1\",\"v\":\"abc\",\"s\":\"Z\"}".getBytes(StandardCharsets.UTF_8);
+
+    withTransforms.execute(SCOPE, integration, new WriteRequest(ok, Map.of(), Map.of(), null));
+    ProblemException e =
+        catchThrowableOfType(
+            ProblemException.class,
+            () ->
+                withTransforms.execute(
+                    SCOPE, integration, new WriteRequest(bad, Map.of(), Map.of(), null)));
+
+    assertThat(
+            scalar(
+                "SELECT numero + '|' + CAST(cliente_id AS VARCHAR) + '|' + CAST(vl_total AS VARCHAR)"
+                    + " + '|' + status + '|' + obs FROM dbo.tb_pedido"))
+        .isEqualTo("AB-1|77|10.01|PAGO|sem obs");
+    assertThat(e.status()).isEqualTo(400);
+    assertThat(e.violations())
+        .extracting(ProblemException.Violation::parameter)
+        .contains("/v", "/s");
+    assertThat(count("dbo.tb_pedido")).isEqualTo(1);
+  }
+
+  @Test
   void fieldsWithTransformsAreRefusedUntilTheyAreImplemented() {
     var integration =
         integration(

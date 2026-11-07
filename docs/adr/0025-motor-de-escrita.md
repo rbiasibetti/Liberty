@@ -28,6 +28,10 @@ Integrações de escrita (INSERT, UPSERT, UPDATE) gravam uma árvore de tabelas 
 
 ## Consequências
 
-- As funções de transformação (E13) entram pelo ponto de extensão `FieldTransformer`; até lá, campos com transformações são recusados como erro de cadastro.
+- As funções de transformação (E13) entram pelo ponto de extensão `FieldTransformer`; ver a seção abaixo.
 - A janela de idempotência descrita acima é aceita e documentada; fechá-la exigiria gravar o registro no banco do tenant (invasivo no schema do cliente).
 - O `@EnableScheduling` passou a estar ativo na aplicação (a rotação de chaves da E08 e a limpeza de idempotência dependem dele).
+
+## Funções de transformação (E13)
+
+Lista fechada, sem execução de código, aplicada em cadeia antes da conversão para o tipo da coluna: `trim`, `upper`, `lower`, `digits` (só dígitos), `substring(início, fim)` (limites além do texto são aparados), `replace(de, para)` (literal), `toDate(formato)` (para ISO `yyyy-MM-dd`), `toDecimal(escala)` (arredonda meio para cima), `default(valor)` (para nulo ou vazio) e `map({...})` (tabela de conversão; valor sem correspondência é erro). Nulo atravessa todas, menos `default`. Falha de conversão vira violação do campo (400) sem repetir o valor. Uma função ausente no valor de um campo `source` ausente ainda roda (`default` preenche).

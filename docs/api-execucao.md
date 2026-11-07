@@ -35,7 +35,7 @@ GET /acme/api/pedidos?cliente=2&periodo=2026-01-05,2026-01-07&sort=-vl_total&lim
 - **Atomicidade:** a árvore inteira (por exemplo pedido, itens e lotes) é gravada numa transação; qualquer falha desfaz tudo.
 - **Validação:** o corpo é conferido contra o JSON Schema da integração e contra os tipos das colunas; todos os defeitos voltam juntos em `errors[]`, com o ponteiro JSON do campo em `parameter` (por exemplo `/itens/1/qtd`), e nada é gravado.
 - **Idempotência:** envie `Idempotency-Key` (1 a 200 caracteres ASCII visíveis; obrigatório nas integrações que o exigem). Repetir a chave com o mesmo conteúdo devolve a resposta original, com `Idempotent-Replayed: true`, sem gravar de novo (por 24 h). Chave igual com conteúdo diferente é 409; chave ainda em andamento é 409 com `Retry-After`. Se a gravação falhar, a chave é liberada.
-- **Resposta:** INSERT devolve 201 com `key` (chave primária gerada) e `rows` (linhas por tabela); UPSERT, 201 ou 200 com `result` (`inserted` ou `updated`) e `key`; UPDATE, 200 com `updated` e `key`, ou 404 se a chave não existe. Campos ausentes no corpo não alteram a coluna em UPDATE e UPSERT; `null` grava NULL.
+- **Resposta:** INSERT devolve 201 com `key` (chave primária gerada) e `rows` (linhas por tabela); UPSERT, 201 ou 200 com `result` (`inserted` ou `updated`) e `key`; UPDATE, 200 com `updated` e `key`, ou 404 se a chave não existe. Os campos podem normalizar o valor com funções (`trim`, `upper`, `lower`, `digits`, `substring`, `replace`, `toDate`, `toDecimal`, `default`, `map`); valor que não converte volta como violação do campo. Campos ausentes no corpo não alteram a coluna em UPDATE e UPSERT; `null` grava NULL.
 
 ## Erros
 

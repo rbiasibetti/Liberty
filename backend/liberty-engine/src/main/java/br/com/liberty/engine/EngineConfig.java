@@ -6,6 +6,7 @@ import br.com.liberty.engine.route.PublishedRoutes;
 import br.com.liberty.engine.write.FieldTransformer;
 import br.com.liberty.engine.write.IdempotencyService;
 import br.com.liberty.engine.write.JpaIdempotencyService;
+import br.com.liberty.engine.write.Transforms;
 import br.com.liberty.engine.write.WriteEngine;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
 import br.com.liberty.infrastructure.persistence.IdempotencyRepository;
@@ -50,7 +51,7 @@ public class EngineConfig {
   @Bean
   @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
   FieldTransformer fieldTransformer() {
-    return FieldTransformer.NONE;
+    return new Transforms();
   }
 
   /** Reservas de idempotência vivem no core: transação do core, não a do tenant. */

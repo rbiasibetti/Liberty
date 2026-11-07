@@ -9,9 +9,11 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     // em desenvolvimento a API responde na mesma origem, sem CORS
-    proxy: { '/api': 'http://127.0.0.1:8080' },
+    proxy: { '/api': process.env.LIBERTY_API_PROXY ?? 'http://127.0.0.1:8080' },
   },
   test: {
+    exclude: ['e2e/**', 'node_modules/**'],
+    testTimeout: 20_000,
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

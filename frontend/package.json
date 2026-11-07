@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
     "verify": "npm run check:api && npm run format:check && npm run lint && npm run typecheck && npm run test && vite build",
-    "audit:prod": "npm audit --omit=dev --audit-level=high"
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "e2e": "bash ../scripts/e2e.sh"
   },
   "dependencies": {
     "@mantine/core": "9.7.5",
@@ -36,9 +37,11 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.0",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",
+    "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.2.1",

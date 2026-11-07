@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../config';
 import { fakeManager, validUser, Wrapper } from '../test/helpers';
@@ -131,6 +132,23 @@ describe('CallbackPage', () => {
       expect(manager.signinRedirectCallback).toHaveBeenCalledOnce();
     });
     expect(window.sessionStorage.getItem('liberty.returnTo')).toBeNull();
+  });
+
+  it('troca o código uma só vez mesmo com o efeito executado duas vezes (StrictMode)', async () => {
+    const manager = fakeManager(null);
+    render(
+      <StrictMode>
+        <Wrapper path="/callback">
+          <CallbackPage manager={manager} />
+        </Wrapper>
+      </StrictMode>,
+    );
+
+    await waitFor(() => {
+      expect(manager.signinRedirectCallback).toHaveBeenCalled();
+    });
+    expect(manager.signinRedirectCallback).toHaveBeenCalledOnce();
+    expect(screen.queryByText('Não foi possível entrar')).toBeNull();
   });
 
   it('mostra erro quando o provedor recusa o código', async () => {

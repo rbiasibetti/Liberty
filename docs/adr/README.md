@@ -38,3 +38,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0030](0030-protecao-de-trafego.md) | E18 | Proteção de tráfego |
 | [0031](0031-frontend-base.md) | E19 | Frontend base |
 | [0032](0032-telas-do-mvp.md) | E20 | Telas do MVP |
+| [0033](0033-testes-de-ponta-a-ponta.md) | E21 | Testes de ponta a ponta no navegador |

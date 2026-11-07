@@ -194,6 +194,7 @@ make verify
 
 - Testes de unidade, de banco (SQL Server real) e de contrato HTTP de ponta a ponta, incluindo fuzzing de parâmetros e testes de falha com desfazimento de transação.
 - Testes de arquitetura (ArchUnit) garantem as fronteiras entre módulos e que todo endpoint é protegido.
+- Teste de acesso entre tenants em todos os endpoints da especificação e E2E no navegador (`scripts/e2e.sh`, Chrome instalado, pilha de teste com OIDC e Vault falsos).
 - Cobertura mínima de 80% de linhas por módulo; testes de mutação (PIT) no perfil `mutation`.
 - A esteira de CI executa build, testes, análise estática (CodeQL) e varredura de segredos. Requisitos e SLOs: [docs/requisitos-nao-funcionais.md](docs/requisitos-nao-funcionais.md).
 
@@ -214,7 +215,8 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Base da interface web: login OIDC com PKCE, troca de tenant, cliente tipado e tratamento de erros
 - [x] Telas de lista, editor, mapeamento, sandbox e revisão e publicação
 - [x] Telas de auditoria e de administração do tenant (conexões, clientes OAuth2, usuários e papéis)
-- [ ] Testes de ponta a ponta no navegador e liberação
+- [x] Testes de ponta a ponta no navegador (Playwright), teste de acesso entre tenants em todos os endpoints, runbooks e restauração do core testada
+- [ ] Liberação: carga (k6), DAST, pentest externo e piloto, ver [Portão 2](docs/portao-2.md)
 - [ ] Fase 2 (recursos avançados)
 
 ## Documentação
@@ -223,6 +225,8 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [API de execução](docs/api-execucao.md)
 - [API de administração (ciclo de vida)](docs/api-administracao.md) e sua [especificação OpenAPI](docs/openapi/admin-api.yaml)
 - [Requisitos não funcionais e SLOs](docs/requisitos-nao-funcionais.md)
+- [Runbooks de operação](docs/runbooks/README.md) e [segurança (ameaças e ASVS)](docs/seguranca/modelo-de-ameacas.md)
+- [Portão 2: critérios do MVP e estado](docs/portao-2.md)
 
 ## Contribuição
 

@@ -14,4 +14,4 @@ k6 run loadtest/scenarios/smoke.js
 BASE_URL=https://hml.exemplo TENANTS=cliente-a:TOKEN_A,cliente-b:TOKEN_B TOKEN_A=... TOKEN_B=... k6 run loadtest/scenarios/escrita.js
 ```
 
-Tokens vêm de variáveis de ambiente, nunca do repositório. A execução noturna (`.github/workflows/nightly-load.yml`) roda os cenários listados em `nightly.txt`.
+Tokens vêm de variáveis de ambiente, nunca do repositório. Os cenários listados em `nightly.txt` são os candidatos a uma execução periódica contra uma instalação de homologação, quando existir uma.

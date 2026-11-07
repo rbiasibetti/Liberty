@@ -4,6 +4,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { takeReturnTo } from './authContext';
 
+/**
+ * O código de autorização só vale uma vez. No modo de desenvolvimento o React executa o efeito duas
+ * vezes; a mesma troca em andamento é reaproveitada em vez de reenviar o código, que seria recusado.
+ */
+const exchanges = new WeakMap<object, Promise<unknown>>();
+
+function exchangeOnce(manager: Pick<UserManager, 'signinRedirectCallback'>): Promise<unknown> {
+  let pending = exchanges.get(manager);
+  if (!pending) {
+    pending = manager.signinRedirectCallback();
+    exchanges.set(manager, pending);
+  }
+  return pending;
+}
+
 /** Conclui o login: troca o código por tokens e volta para onde o usuário estava. */
 export function CallbackPage({
   manager,
@@ -15,7 +30,7 @@ export function CallbackPage({
 
   useEffect(() => {
     let active = true;
-    manager.signinRedirectCallback().then(
+    exchangeOnce(manager).then(
       () => {
         if (active) {
           void navigate(takeReturnTo(), { replace: true });

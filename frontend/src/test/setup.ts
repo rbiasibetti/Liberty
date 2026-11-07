@@ -1,5 +1,8 @@
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
+
+// máquinas carregadas (CI, E2E em paralelo) demoram mais que o 1 s padrão do Testing Library
+configure({ asyncUtilTimeout: 5000 });
 
 // O Mantine usa matchMedia, ResizeObserver e scrollIntoView, que o jsdom não traz.
 Object.defineProperty(window, 'matchMedia', {

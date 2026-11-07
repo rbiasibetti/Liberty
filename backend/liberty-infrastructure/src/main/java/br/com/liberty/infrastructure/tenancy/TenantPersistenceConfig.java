@@ -82,6 +82,11 @@ public class TenantPersistenceConfig {
     return new VaultSecretProvider(vault, properties.mount());
   }
 
+  @Bean
+  SecretWriter secretWriter(VaultTemplate vault, LibertyVaultProperties properties) {
+    return new VaultSecretWriter(vault, properties.mount());
+  }
+
   static VaultTemplate vaultTemplate(LibertyVaultProperties properties) {
     VaultEndpoint endpoint = VaultEndpoint.from(properties.uri());
     VaultClient client = VaultClient.builder().endpoint(endpoint).build();

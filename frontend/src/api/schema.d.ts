@@ -271,6 +271,168 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{slug}/audit/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Consulta a auditoria de execuções do tenant
+         * @description Janela de até 31 dias (padrão, as últimas 24 h). Só metadados e erro mascarado.
+         */
+        get: operations["searchAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** Conexões do tenant com os bancos (sem senhas) */
+        get: operations["listConnections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/connections/{env}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Cria ou atualiza a conexão do ambiente (a senha vai para o cofre) */
+        put: operations["saveConnection"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/connections/{env}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Testa a conexão salva (abre uma conexão e roda SELECT 1) */
+        post: operations["testConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** Clientes OAuth2 do tenant */
+        get: operations["listClients"];
+        put?: never;
+        /** Cria um cliente; o segredo só aparece nesta resposta */
+        post: operations["createClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/clients/{clientId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoga o cliente */
+        delete: operations["revokeClient"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** Usuários do tenant e seus papéis */
+        get: operations["listUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/users/{sub}/roles/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                sub: string;
+                role: components["schemas"]["TenantRole"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Concede o papel ao usuário */
+        put: operations["grantRole"];
+        post?: never;
+        /** Retira o papel do usuário */
+        delete: operations["revokeRole"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/{slug}/environments/{env}/openapi.json": {
         parameters: {
             query?: never;
@@ -414,6 +576,87 @@ export interface components {
             /** Format: int64 */
             millis: number;
             rolledBack: boolean;
+        };
+        AuditRow: {
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            createdAt: string;
+            integration: string;
+            environment: string;
+            method: string;
+            route: string;
+            /** Format: int32 */
+            status: number;
+            /** Format: int64 */
+            durationMs: number;
+            /** Format: int64 */
+            dbDurationMs?: number | null;
+            /** Format: int64 */
+            scriptDurationMs?: number | null;
+            errorCode?: string | null;
+            errorMessage?: string | null;
+            requestId: string;
+            clientId?: string | null;
+        };
+        AuditPage: {
+            items: components["schemas"]["AuditRow"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            hasMore: boolean;
+        };
+        Connection: {
+            /** @enum {string} */
+            environment: "HML" | "PRD";
+            jdbcUrl: string;
+            dbUsername: string;
+            /** Format: int32 */
+            poolMax: number;
+            status: string;
+        };
+        ConnectionRequest: {
+            jdbcUrl: string;
+            dbUsername: string;
+            /** @description Obrigatória na criação; omitida mantém a do cofre */
+            password?: string | null;
+            /** Format: int32 */
+            poolMax?: number | null;
+        };
+        ConnectionTest: {
+            ok: boolean;
+            /** Format: int64 */
+            millis: number;
+            message: string;
+        };
+        Client: {
+            clientId: string;
+            /** @enum {string} */
+            environment: "HML" | "PRD";
+            scopes: string[];
+            status: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /** Format: date-time */
+            revokedAt?: string | null;
+        };
+        ClientRequest: {
+            clientId: string;
+            /** @enum {string} */
+            environment: "HML" | "PRD";
+            scopes: string[];
+        };
+        CreatedClient: {
+            client: components["schemas"]["Client"];
+            /** @description Mostrado uma única vez */
+            clientSecret: string;
+        };
+        TenantUser: {
+            sub: string;
+            roles: components["schemas"]["TenantRole"][];
         };
         Violation: {
             parameter?: string;
@@ -813,6 +1056,254 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CatalogTableDetail"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    searchAudit: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                integration?: string;
+                /** @description Um status (500) ou uma classe (5xx) */
+                status?: string;
+                requestId?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página de execuções, da mais recente para a mais antiga */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conexões por ambiente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Connection"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    saveConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Conexão salva */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Connection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    testConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resultado do teste */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionTest"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Clientes (sem segredo) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Client"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Cliente criado */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedClient"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revogado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usuários */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantUser"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    grantRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                sub: string;
+                role: components["schemas"]["TenantRole"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Concedido */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                sub: string;
+                role: components["schemas"]["TenantRole"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retirado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

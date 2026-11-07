@@ -44,7 +44,10 @@ class AdminApiSpecTest {
     Set<String> endpoints = new TreeSet<>();
     for (String name :
         new String[] {
-          "br.com.liberty.web.LifecycleController", "br.com.liberty.security.MeController"
+          "br.com.liberty.web.LifecycleController",
+          "br.com.liberty.security.MeController",
+          "br.com.liberty.admin.PlatformAdminController",
+          "br.com.liberty.admin.AuditController"
         }) {
       Class<?> controller = Class.forName(name);
       RequestMapping base =

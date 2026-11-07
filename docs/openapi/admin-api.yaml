@@ -236,6 +236,160 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CatalogTableDetail" }
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/audit/executions:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: searchAudit
+      summary: Consulta a auditoria de execuções do tenant
+      description: Janela de até 31 dias (padrão, as últimas 24 h). Só metadados e erro mascarado.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: integration, in: query, schema: { type: string } }
+        - { name: status, in: query, description: "Um status (500) ou uma classe (5xx)", schema: { type: string } }
+        - { name: requestId, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, format: int32, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, format: int32, default: 50 } }
+      responses:
+        "200":
+          description: Página de execuções, da mais recente para a mais antiga
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditPage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/connections:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: listConnections
+      summary: Conexões do tenant com os bancos (sem senhas)
+      responses:
+        "200":
+          description: Conexões por ambiente
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Connection" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/connections/{env}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Env"
+    put:
+      operationId: saveConnection
+      summary: Cria ou atualiza a conexão do ambiente (a senha vai para o cofre)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConnectionRequest" }
+      responses:
+        "200":
+          description: Conexão salva
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Connection" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/connections/{env}/test:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Env"
+    post:
+      operationId: testConnection
+      summary: Testa a conexão salva (abre uma conexão e roda SELECT 1)
+      responses:
+        "200":
+          description: Resultado do teste
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConnectionTest" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/clients:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: listClients
+      summary: Clientes OAuth2 do tenant
+      responses:
+        "200":
+          description: Clientes (sem segredo)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Client" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createClient
+      summary: Cria um cliente; o segredo só aparece nesta resposta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientRequest" }
+      responses:
+        "201":
+          description: Cliente criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreatedClient" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/clients/{clientId}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - name: clientId
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      operationId: revokeClient
+      summary: Revoga o cliente
+      responses:
+        "204":
+          description: Revogado
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/users:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: listUsers
+      summary: Usuários do tenant e seus papéis
+      responses:
+        "200":
+          description: Usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TenantUser" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/users/{sub}/roles/{role}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - name: sub
+        in: path
+        required: true
+        schema: { type: string }
+      - name: role
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/TenantRole" }
+    put:
+      operationId: grantRole
+      summary: Concede o papel ao usuário
+      responses:
+        "204":
+          description: Concedido
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: revokeRole
+      summary: Retira o papel do usuário
+      responses:
+        "204":
+          description: Retirado
+        default: { $ref: "#/components/responses/Problem" }
   /api/v1/tenants/{slug}/environments/{env}/openapi.json:
     parameters:
       - $ref: "#/components/parameters/Slug"
@@ -403,6 +557,94 @@ components:
         logs: { type: string }
         millis: { type: integer, format: int64 }
         rolledBack: { type: boolean }
+    AuditRow:
+      type: object
+      required: [id, createdAt, integration, environment, method, route, status, durationMs, requestId]
+      properties:
+        id: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        integration: { type: string }
+        environment: { type: string }
+        method: { type: string }
+        route: { type: string }
+        status: { type: integer, format: int32 }
+        durationMs: { type: integer, format: int64 }
+        dbDurationMs: { type: [integer, "null"], format: int64 }
+        scriptDurationMs: { type: [integer, "null"], format: int64 }
+        errorCode: { type: [string, "null"] }
+        errorMessage: { type: [string, "null"] }
+        requestId: { type: string }
+        clientId: { type: [string, "null"] }
+    AuditPage:
+      type: object
+      required: [items, page, size, hasMore]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AuditRow" }
+        page: { type: integer, format: int32 }
+        size: { type: integer, format: int32 }
+        hasMore: { type: boolean }
+    Connection:
+      type: object
+      required: [environment, jdbcUrl, dbUsername, poolMax, status]
+      properties:
+        environment: { type: string, enum: [HML, PRD] }
+        jdbcUrl: { type: string }
+        dbUsername: { type: string }
+        poolMax: { type: integer, format: int32 }
+        status: { type: string }
+    ConnectionRequest:
+      type: object
+      required: [jdbcUrl, dbUsername]
+      properties:
+        jdbcUrl: { type: string }
+        dbUsername: { type: string }
+        password: { type: [string, "null"], description: Obrigatória na criação; omitida mantém a do cofre }
+        poolMax: { type: [integer, "null"], format: int32 }
+    ConnectionTest:
+      type: object
+      required: [ok, millis, message]
+      properties:
+        ok: { type: boolean }
+        millis: { type: integer, format: int64 }
+        message: { type: string }
+    Client:
+      type: object
+      required: [clientId, environment, scopes, status, createdAt]
+      properties:
+        clientId: { type: string }
+        environment: { type: string, enum: [HML, PRD] }
+        scopes:
+          type: array
+          items: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: [string, "null"], format: date-time }
+        revokedAt: { type: [string, "null"], format: date-time }
+    ClientRequest:
+      type: object
+      required: [clientId, environment, scopes]
+      properties:
+        clientId: { type: string }
+        environment: { type: string, enum: [HML, PRD] }
+        scopes:
+          type: array
+          items: { type: string }
+    CreatedClient:
+      type: object
+      required: [client, clientSecret]
+      properties:
+        client: { $ref: "#/components/schemas/Client" }
+        clientSecret: { type: string, description: Mostrado uma única vez }
+    TenantUser:
+      type: object
+      required: [sub, roles]
+      properties:
+        sub: { type: string }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/TenantRole" }
     Violation:
       type: object
       properties:

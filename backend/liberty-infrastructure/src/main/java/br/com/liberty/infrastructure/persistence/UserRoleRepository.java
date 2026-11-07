@@ -9,6 +9,10 @@ public interface UserRoleRepository extends Repository<UserRoleEntity, UserRoleE
 
   List<UserRoleEntity> findByIdUserSub(String userSub);
 
+  List<UserRoleEntity> findByIdTenantId(Long tenantId);
+
+  java.util.Optional<UserRoleEntity> findById(UserRoleEntity.Key key);
+
   UserRoleEntity save(UserRoleEntity role);
 
   void delete(UserRoleEntity role);

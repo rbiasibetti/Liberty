@@ -8,7 +8,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -187,7 +186,8 @@ public final class AuditRecorder implements AutoCloseable {
   }
 
   private static void fill(PreparedStatement ps, long tenantId, AuditEvent e) throws SQLException {
-    ps.setTimestamp(1, Timestamp.from(e.createdAt()));
+    // a coluna guarda a hora UTC (como o SYSUTCDATETIME() do padrão), sem depender do fuso da JVM
+    ps.setObject(1, java.time.LocalDateTime.ofInstant(e.createdAt(), java.time.ZoneOffset.UTC));
     ps.setLong(2, tenantId);
     ps.setString(3, e.integrationKey());
     nullableLong(ps, 4, e.integrationId());

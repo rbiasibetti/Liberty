@@ -3,9 +3,11 @@ import { Route, Routes } from 'react-router';
 import { useApi } from './api/apiContext';
 import { AppLayout } from './layout/AppLayout';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { AuditPage } from './screens/AuditPage';
 import { EditorPage } from './screens/EditorPage';
 import { IntegrationsPage } from './screens/IntegrationsPage';
 import { ReviewPage } from './screens/ReviewPage';
+import { TenantAdminPage } from './screens/TenantAdminPage';
 import { TenantProvider } from './tenant/TenantProvider';
 import { useTenant } from './tenant/tenantContext';
 
@@ -36,6 +38,8 @@ function Gate() {
         <Route index element={<IntegrationsPage />} />
         <Route path="integracoes/:key" element={<EditorPage />} />
         <Route path="integracoes/:key/versoes/:no" element={<ReviewPage />} />
+        <Route path="auditoria" element={<AuditPage />} />
+        <Route path="administracao" element={<TenantAdminPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

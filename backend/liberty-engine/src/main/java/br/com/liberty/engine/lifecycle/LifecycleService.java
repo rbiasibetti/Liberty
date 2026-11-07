@@ -213,7 +213,8 @@ public class LifecycleService {
                     + " FROM int_audit_execution WHERE tenant_id = :tenant AND created_at >= :since"
                     + " GROUP BY integration_key")
             .setParameter("tenant", tenant.getId())
-            .setParameter("since", Instant.now().minusSeconds(24 * 3600))
+            .setParameter(
+                "since", java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).minusHours(24))
             .getResultList();
     Map<String, long[]> health = new HashMap<>();
     for (Object[] row : rows) {

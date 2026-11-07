@@ -1,5 +1,6 @@
 package br.com.liberty.infrastructure.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
@@ -7,6 +8,8 @@ import org.springframework.data.repository.Repository;
 public interface ApiClientRepository extends Repository<ApiClientEntity, Long> {
 
   Optional<ApiClientEntity> findByClientId(String clientId);
+
+  List<ApiClientEntity> findByTenantIdOrderByClientId(Long tenantId);
 
   ApiClientEntity save(ApiClientEntity client);
 }

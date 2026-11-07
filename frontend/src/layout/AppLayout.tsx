@@ -1,6 +1,12 @@
 import { AppShell, Burger, Button, Group, Menu, NavLink, Select, Text, Title } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconListDetails, IconLogout, IconUser } from '@tabler/icons-react';
+import {
+  IconHistory,
+  IconListDetails,
+  IconLogout,
+  IconSettings,
+  IconUser,
+} from '@tabler/icons-react';
 import { Link, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/useAuth';
 import { notifyError } from '../errors/notify';
@@ -71,6 +77,24 @@ export function AppLayout() {
           leftSection={<IconListDetails size={16} />}
           active={location.pathname === '/'}
         />
+        {tenant.can('INTEGRATOR') && (
+          <NavLink
+            component={Link}
+            to="/auditoria"
+            label="Auditoria"
+            leftSection={<IconHistory size={16} />}
+            active={location.pathname === '/auditoria'}
+          />
+        )}
+        {tenant.platformAdmin && (
+          <NavLink
+            component={Link}
+            to="/administracao"
+            label="Administração"
+            leftSection={<IconSettings size={16} />}
+            active={location.pathname === '/administracao'}
+          />
+        )}
         {tenant.platformAdmin && (
           <Text size="xs" c="dimmed" p="xs">
             Administrador da plataforma

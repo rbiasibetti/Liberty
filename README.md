@@ -213,7 +213,8 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Proteção de tráfego: limite de taxa por plano (Bucket4j com Redis opcional), bulkhead e 429
 - [x] Base da interface web: login OIDC com PKCE, troca de tenant, cliente tipado e tratamento de erros
 - [x] Telas de lista, editor, mapeamento, sandbox e revisão e publicação
-- [ ] Telas de auditoria e de administração do tenant (conexões, clientes OAuth2, usuários) e testes de ponta a ponta
+- [x] Telas de auditoria e de administração do tenant (conexões, clientes OAuth2, usuários e papéis)
+- [ ] Testes de ponta a ponta no navegador e liberação
 - [ ] Fase 2 (recursos avançados)
 
 ## Documentação

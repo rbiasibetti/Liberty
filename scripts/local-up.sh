@@ -17,10 +17,13 @@ ensure_var LIBERTY_TEST_DB_PORT 1433
 ensure_var LIBERTY_TEST_DB_USER sa
 for v in LIBERTY_REDIS_PASSWORD LIBERTY_VAULT_TOKEN LIBERTY_KEYCLOAK_ADMIN_PASSWORD LIBERTY_GRAFANA_ADMIN_PASSWORD \
          LIBERTY_LOCAL_USER_PASSWORD LIBERTY_CORE_MIGRATOR_PASSWORD LIBERTY_CORE_APP_PASSWORD \
-         LIBERTY_TENANT_A_DB_PASSWORD LIBERTY_TENANT_B_DB_PASSWORD; do
+         LIBERTY_TENANT_A_DB_PASSWORD LIBERTY_TENANT_B_DB_PASSWORD LIBERTY_METRICS_PASSWORD; do
   ensure_var "$v"
 done
 set -a; . "$env_file"; set +a
+# o Prometheus lê a senha da conta técnica de métricas de um arquivo (ignorado pelo Git)
+printf %s "$LIBERTY_METRICS_PASSWORD" > "$root/deploy/local/prometheus/.metrics_password"
+chmod 644 "$root/deploy/local/prometheus/.metrics_password"
 [ -n "${LIBERTY_TEST_DB_PASSWORD:-}" ] || { echo "Defina LIBERTY_TEST_DB_PASSWORD (senha do 'sa') em .env.local" >&2; exit 1; }
 
 # docker compose, docker-compose ou podman (via socket compatível)

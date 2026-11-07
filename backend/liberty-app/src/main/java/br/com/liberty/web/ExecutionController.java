@@ -2,9 +2,13 @@ package br.com.liberty.web;
 
 import br.com.liberty.domain.tenancy.TenantContext;
 import br.com.liberty.domain.tenancy.TenantScope;
+import br.com.liberty.engine.audit.AuditEvent;
+import br.com.liberty.engine.audit.AuditRecorder;
+import br.com.liberty.engine.audit.RequestTimings;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.read.ReadResult;
+import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.engine.route.PublishedRoutes;
 import br.com.liberty.engine.route.RouteMatch;
 import br.com.liberty.engine.route.RouteTable;
@@ -12,15 +16,19 @@ import br.com.liberty.engine.script.ScriptHooks;
 import br.com.liberty.engine.write.WriteEngine;
 import br.com.liberty.engine.write.WriteRequest;
 import br.com.liberty.engine.write.WriteResult;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,25 +56,114 @@ class ExecutionController {
   private final ReadEngine reads;
   private final WriteEngine writes;
   private final ScriptHooks scripts;
+  private final AuditRecorder audit;
+  private final MeterRegistry meters;
 
   ExecutionController(
-      PublishedRoutes routes, ReadEngine reads, WriteEngine writes, ScriptHooks scripts) {
+      PublishedRoutes routes,
+      ReadEngine reads,
+      WriteEngine writes,
+      ScriptHooks scripts,
+      AuditRecorder audit,
+      MeterRegistry meters) {
     this.scripts = scripts;
+    this.audit = audit;
+    this.meters = meters;
     this.routes = routes;
     this.reads = reads;
     this.writes = writes;
+  }
+
+  /** O que a auditoria e as métricas precisam saber da execução, preenchido ao longo dela. */
+  private static final class Seen {
+    PublishedIntegration integration;
+    int status = 500;
+    String errorType;
+    String errorDetail;
   }
 
   @RequestMapping("/{slug}/api/**")
   @PreAuthorize("hasRole('CLIENT')")
   ResponseEntity<Object> execute(HttpServletRequest request, Authentication authentication) {
     TenantScope scope = TenantContext.require();
+    Seen seen = new Seen();
+    long start = System.nanoTime();
+    RequestTimings.begin();
+    try {
+      ResponseEntity<Object> response = handle(request, authentication, scope, seen);
+      seen.status = response.getStatusCode().value();
+      return response;
+    } catch (ProblemException e) {
+      seen.status = e.status();
+      seen.errorType = e.type().substring(e.type().lastIndexOf(':') + 1);
+      seen.errorDetail = e.getMessage();
+      throw e;
+    } finally {
+      observe(
+          request, authentication, scope, seen, System.nanoTime() - start, RequestTimings.end());
+    }
+  }
+
+  private void observe(
+      HttpServletRequest request,
+      Authentication authentication,
+      TenantScope scope,
+      Seen seen,
+      long nanos,
+      RequestTimings.Totals totals) {
+    if (seen.integration == null) {
+      return; // rota inexistente ou método errado: nada a atribuir a uma integração
+    }
+    String integration = seen.integration.key();
+    String tenant = scope.tenant().value();
+    String statusClass = (seen.status / 100) + "xx";
+    Timer.builder("liberty.integration.duration")
+        .tag("tenant", tenant)
+        .tag("integration", integration)
+        .tag("status", statusClass)
+        .publishPercentileHistogram()
+        .register(meters)
+        .record(nanos, TimeUnit.NANOSECONDS);
+    if (totals.dbMillis() > 0) {
+      meters
+          .timer("liberty.integration.db.duration", "tenant", tenant, "integration", integration)
+          .record(totals.dbMillis(), TimeUnit.MILLISECONDS);
+    }
+    if (totals.scriptMillis() > 0) {
+      meters
+          .timer("liberty.script.duration", "tenant", tenant, "integration", integration)
+          .record(totals.scriptMillis(), TimeUnit.MILLISECONDS);
+    }
+    String requestId = org.slf4j.MDC.get(RequestIdFilter.MDC_KEY);
+    audit.record(
+        new AuditEvent(
+            Instant.now(),
+            tenant,
+            integration,
+            seen.integration.integrationId(),
+            seen.integration.versionId(),
+            scope.environment().name(),
+            request.getMethod(),
+            seen.integration.snapshot().integration().route(),
+            seen.status,
+            nanos / 1_000_000,
+            totals.dbMillis(),
+            totals.scriptMillis(),
+            seen.errorType,
+            seen.errorDetail,
+            requestId == null ? "-" : requestId,
+            authentication.getName()));
+  }
+
+  private ResponseEntity<Object> handle(
+      HttpServletRequest request, Authentication authentication, TenantScope scope, Seen seen) {
     List<String> path = pathSegments(request, scope.tenant().value());
     RouteTable.Resolution resolution = routes.resolve(scope, request.getMethod(), path);
     if (resolution.match().isEmpty()) {
       throw routeProblem(resolution);
     }
     RouteMatch match = resolution.match().get();
+    seen.integration = match.integration();
     String key = match.integration().key();
     if (authentication.getAuthorities().stream()
         .map(GrantedAuthority::getAuthority)

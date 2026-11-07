@@ -46,7 +46,7 @@ class CoreSchemaTest {
   static void migrate() throws SQLException {
     db = CoreTestDatabase.create();
     Flyway flyway = flyway();
-    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
+    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(3);
     connection = DriverManager.getConnection(db.url(), db.user(), db.password());
   }
 
@@ -305,13 +305,20 @@ class CoreSchemaTest {
   }
 
   @Test
-  void auditPayloadRequiresItsExecution() {
-    assertSqlError(
-        () ->
-            sql(
-                "INSERT INTO int_audit_payload (created_at, execution_id, request_payload)"
-                    + " VALUES (SYSUTCDATETIME(), 999999, 0x01)"),
-        CHECK_OR_FK);
+  void auditTablesArePartitionedByMonthAndHaveNoForeignKeys() throws SQLException {
+    // sem FK o histórico de auditoria pode trocar partições (V3); a auditoria é partida por mês
+    sql(
+        "INSERT INTO int_audit_payload (created_at, execution_id, request_payload)"
+            + " VALUES (SYSUTCDATETIME(), 999999, 0x01)");
+
+    try (Statement st = connection.createStatement();
+        ResultSet rs =
+            st.executeQuery(
+                "SELECT COUNT(*) FROM sys.partitions WHERE object_id = OBJECT_ID('int_audit_execution')"
+                    + " AND index_id = 1")) {
+      rs.next();
+      assertThat(rs.getInt(1)).isGreaterThan(30);
+    }
   }
 
   @Test

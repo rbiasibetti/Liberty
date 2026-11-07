@@ -1,6 +1,7 @@
 package br.com.liberty.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -66,6 +67,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 class WriteContractTest {
 
   private static final CoreTestDatabase.Scratch ACME_DB = CoreTestDatabase.create();
+  private static final CoreTestDatabase.Scratch CORE_DB = CoreTestDatabase.create();
   private static HttpServer vault;
 
   static {
@@ -92,7 +94,7 @@ class WriteContractTest {
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
-    var core = CoreTestDatabase.create();
+    var core = CORE_DB;
     registry.add("spring.datasource.url", core::url);
     registry.add("spring.datasource.username", core::user);
     registry.add("spring.datasource.password", core::password);
@@ -607,5 +609,109 @@ class WriteContractTest {
     assertThat(broken.getStatus()).isEqualTo(500);
     assertThat(broken.getContentAsString()).doesNotContain("segredo interno");
     assertThat(healthy.getStatus()).isEqualTo(201);
+  }
+
+  // ---------- auditoria e métricas ----------
+
+  private static String coreScalar(String sql) throws SQLException {
+    try (Connection c =
+            DriverManager.getConnection(CORE_DB.url(), CORE_DB.user(), CORE_DB.password());
+        Statement st = c.createStatement();
+        ResultSet rs = st.executeQuery(sql)) {
+      return rs.next() ? rs.getString(1) : null;
+    }
+  }
+
+  private static void eventuallyTrue(java.util.function.BooleanSupplier condition)
+      throws InterruptedException {
+    long limit = System.currentTimeMillis() + 10_000;
+    while (System.currentTimeMillis() < limit && !condition.getAsBoolean()) {
+      Thread.sleep(100);
+    }
+    assertThat(condition.getAsBoolean()).isTrue();
+  }
+
+  @Test
+  void everyExecutionIsAuditedWithoutPayloadsAndMeasured() throws Exception {
+    postPedido(pedido("AUD-1", ITENS_OK));
+    postPedido("{'numero':5,'email':'ana@exemplo.com'}");
+
+    eventuallyTrue(
+        () -> {
+          try {
+            return "2"
+                .equals(
+                    coreScalar(
+                        "SELECT COUNT(*) FROM int_audit_execution WHERE integration_key = 'pedido-criar'"));
+          } catch (SQLException e) {
+            return false;
+          }
+        });
+
+    assertThat(
+            coreScalar(
+                "SELECT COUNT(*) FROM int_audit_execution WHERE integration_key = 'pedido-criar' AND status_code = 201"))
+        .isEqualTo("1");
+    assertThat(
+            coreScalar(
+                "SELECT error_code FROM int_audit_execution WHERE integration_key = 'pedido-criar' AND status_code = 400"))
+        .isEqualTo("validation");
+    assertThat(
+            coreScalar(
+                "SELECT client_id FROM int_audit_execution WHERE status_code = 201 AND integration_key = 'pedido-criar'"))
+        .isEqualTo("acme-hml");
+    assertThat(
+            coreScalar(
+                "SELECT COUNT(*) FROM int_audit_execution WHERE route = '/pedidos' AND request_id <> '-' AND duration_ms >= 0"))
+        .isNotEqualTo("0");
+    assertThat(
+            coreScalar(
+                "SELECT db_duration_ms FROM int_audit_execution WHERE status_code = 201 AND integration_key = 'pedido-criar'"))
+        .isNotNull();
+    assertThat(
+            coreScalar(
+                "SELECT COUNT(*) FROM int_audit_execution WHERE CONCAT(error_message, route) LIKE '%ana@%' OR error_message LIKE '%AUD-1%'"))
+        .isEqualTo("0");
+  }
+
+  @Test
+  void prometheusMetricsAreOnlyForTheTechnicalAccount() throws Exception {
+    postPedido(pedido("MET-1", ITENS_OK));
+    String basic =
+        "Basic "
+            + Base64.getEncoder()
+                .encodeToString("metrics:teste-metricas".getBytes(StandardCharsets.UTF_8));
+    String wrong =
+        "Basic "
+            + Base64.getEncoder().encodeToString("metrics:errada".getBytes(StandardCharsets.UTF_8));
+
+    var anonymous = mvc.perform(get("/actuator/prometheus")).andReturn().getResponse();
+    var bad =
+        mvc.perform(get("/actuator/prometheus").header(HttpHeaders.AUTHORIZATION, wrong))
+            .andReturn()
+            .getResponse();
+    var ok =
+        mvc.perform(get("/actuator/prometheus").header(HttpHeaders.AUTHORIZATION, basic))
+            .andReturn()
+            .getResponse();
+    var clientToken =
+        mvc.perform(
+                get("/actuator/prometheus")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token("acme-hml")))
+            .andReturn()
+            .getResponse();
+
+    assertThat(anonymous.getStatus()).isEqualTo(401);
+    assertThat(bad.getStatus()).isEqualTo(401);
+    assertThat(clientToken.getStatus()).isEqualTo(401);
+    assertThat(ok.getStatus()).isEqualTo(200);
+    String text = ok.getContentAsString();
+    assertThat(text)
+        .contains("liberty_integration_duration_seconds_count")
+        .contains("integration=\"pedido-criar\"")
+        .contains("liberty_audit_dropped_total")
+        .contains("liberty_audit_queue_size")
+        .contains("liberty_script_workers")
+        .contains("application=\"liberty\"");
   }
 }

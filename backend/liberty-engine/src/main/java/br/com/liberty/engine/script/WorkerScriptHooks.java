@@ -1,6 +1,7 @@
 package br.com.liberty.engine.script;
 
 import br.com.liberty.domain.tenancy.TenantScope;
+import br.com.liberty.engine.audit.RequestTimings;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
@@ -118,7 +119,9 @@ public final class WorkerScriptHooks implements ScriptHooks {
               properties.timeout(),
               properties.maxStatements());
       var host = new ScriptHost(scope, integration.snapshot().namedQueries(), catalog, jdbc);
+      long start = System.nanoTime();
       ScriptExecutor.Outcome outcome = executor.run(request, host);
+      RequestTimings.addScript(System.nanoTime() - start);
       return translate(integration, function, outcome);
     } catch (ScriptExecutor.BusyException e) {
       throw busy();

@@ -2,6 +2,7 @@ package br.com.liberty.engine.read;
 
 import br.com.liberty.domain.tenancy.TenantContext;
 import br.com.liberty.domain.tenancy.TenantScope;
+import br.com.liberty.engine.audit.RequestTimings;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.engine.trace.SqlTrace;
@@ -64,6 +65,7 @@ public final class ReadEngine {
     SelectPlan plan = plan(scope, integration, select, input);
     long start = System.nanoTime();
     List<Map<String, Object>> rows = run(scope, plan);
+    RequestTimings.addDb(System.nanoTime() - start);
     if (trace != null) {
       trace.record(plan.sql(), rows.size(), (System.nanoTime() - start) / 1_000_000);
     }

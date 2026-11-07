@@ -69,6 +69,8 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./prometheus/.metrics_password:/etc/prometheus/metrics_password:ro
     extra_hosts: ["host.docker.internal:host-gateway"]
     ports: ["127.0.0.1:9090:9090"]
     security_opt: ["no-new-privileges:true"]
@@ -81,6 +83,7 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ["127.0.0.1:3000:3000"]
     depends_on: [prometheus]
     security_opt: ["no-new-privileges:true"]

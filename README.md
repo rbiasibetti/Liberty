@@ -209,7 +209,8 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Funções de transformação de campos e motor de scripts JavaScript isolados
 - [x] Ciclo de vida das integrações (rascunho, revisão, publicação por ambiente, rollback) e OpenAPI gerado
 - [x] Sandbox de execução em HML com rollback, rastro de SQL e logs
-- [ ] Auditoria, observabilidade e proteção de tráfego (limites de taxa)
+- [x] Auditoria assíncrona, partições mensais com arquivamento, métricas Prometheus, rastros OpenTelemetry, dashboard e alertas
+- [ ] Proteção de tráfego (limites de taxa)
 - [ ] Interface web de administração e testes de ponta a ponta
 - [ ] Fase 2 (recursos avançados)
 

@@ -2,6 +2,7 @@ package br.com.liberty.engine.write;
 
 import br.com.liberty.domain.tenancy.TenantContext;
 import br.com.liberty.domain.tenancy.TenantScope;
+import br.com.liberty.engine.audit.RequestTimings;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.problem.ProblemException.Violation;
 import br.com.liberty.engine.read.InputParser;
@@ -274,6 +275,8 @@ public final class WriteEngine {
       JsonNode body,
       SqlTrace trace) {
     WriteExecutor executor = trace == null ? this.executor : new WriteExecutor(jdbc, trace);
+    long start = System.nanoTime();
+    long scriptBefore = RequestTimings.scriptNanosNow();
     try {
       Done done =
           TenantContext.supplyAs(
@@ -310,6 +313,10 @@ public final class WriteEngine {
         throw e; // quem chama repete a transação
       }
       throw translate(scope, integration, e);
+    } finally {
+      long elapsed = System.nanoTime() - start;
+      long scripts = RequestTimings.scriptNanosNow() - scriptBefore;
+      RequestTimings.addDb(Math.max(0, elapsed - scripts));
     }
   }
 

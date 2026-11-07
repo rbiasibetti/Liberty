@@ -25,3 +25,6 @@ application-local.*
 proposta.odt.lock
 .~lock.*
 .local/
+
+# senha local do scrape de métricas
+deploy/local/prometheus/.metrics_password

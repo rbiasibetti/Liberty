@@ -34,3 +34,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0026](0026-motor-de-scripts.md) | E14 | Motor de scripts em processos trabalhadores |
 | [0027](0027-ciclo-de-vida-das-integracoes.md) | E15 | Ciclo de vida das integrações |
 | [0028](0028-sandbox.md) | E16 | Sandbox de execução |
+| [0029](0029-auditoria-e-observabilidade.md) | E17 | Auditoria e observabilidade |

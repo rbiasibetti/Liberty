@@ -1,0 +1,54 @@
+# Alertas de operação (SLOs em docs/requisitos-nao-funcionais.md). Os limiares são pontos de partida.
+groups:
+  - name: liberty
+    rules:
+      - alert: LibertyInstanciaForaDoAr
+        expr: up{job="liberty-backend"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Instância {{ $labels.instance }} não responde ao scrape"
+
+      - alert: LibertyErros5xxAltos
+        expr: |
+          sum(rate(liberty_integration_duration_seconds_count{status="5xx"}[5m]))
+            / clamp_min(sum(rate(liberty_integration_duration_seconds_count[5m])), 1) > 0.02
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Mais de 2% das execuções terminam em erro 5xx"
+
+      - alert: LibertyLatenciaP95Alta
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(liberty_integration_duration_seconds_bucket[5m]))) > 0.3
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 das execuções acima de 300 ms por 10 minutos"
+
+      - alert: LibertyAuditoriaDescartando
+        expr: increase(liberty_audit_dropped_total[10m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "A fila de auditoria está cheia e eventos estão sendo descartados"
+
+      - alert: LibertyAuditoriaFalhandoNaGravacao
+        expr: increase(liberty_audit_failed_total[10m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Eventos de auditoria perdidos por falha de gravação no banco central"
+
+      - alert: LibertyFilaDeAuditoriaCheia
+        expr: liberty_audit_queue_size / liberty_audit_queue_capacity > 0.8
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fila de auditoria acima de 80% da capacidade"
+
+      - alert: LibertyScriptsLentos
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(liberty_script_duration_seconds_bucket[5m]))) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 do tempo de script acima de 50 ms"

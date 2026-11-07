@@ -1,5 +1,8 @@
 package br.com.liberty.engine;
 
+import br.com.liberty.engine.audit.AuditMaintenance;
+import br.com.liberty.engine.audit.AuditRecorder;
+import br.com.liberty.engine.audit.LibertyAuditProperties;
 import br.com.liberty.engine.lifecycle.LifecycleService;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.route.PublicationSource;
@@ -31,7 +34,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration(proxyBeanMethods = false)
 @org.springframework.scheduling.annotation.EnableScheduling
-@EnableConfigurationProperties({LibertyEngineProperties.class, LibertyScriptProperties.class})
+@EnableConfigurationProperties({
+  LibertyEngineProperties.class,
+  LibertyScriptProperties.class,
+  LibertyAuditProperties.class
+})
 public class EngineConfig {
 
   @Bean
@@ -143,5 +150,36 @@ public class EngineConfig {
       ScriptHooks scripts,
       SnapshotService snapshots) {
     return new SandboxService(lifecycle, reads, writes, scripts, snapshots);
+  }
+
+  /** Grava no banco central, em lote e fora do caminho da requisição. */
+  @Bean(destroyMethod = "close")
+  AuditRecorder auditRecorder(
+      javax.sql.DataSource coreDataSource,
+      io.micrometer.core.instrument.MeterRegistry meters,
+      LibertyAuditProperties properties) {
+    return new AuditRecorder(
+        new org.springframework.jdbc.core.JdbcTemplate(coreDataSource),
+        meters,
+        properties.queueCapacity(),
+        properties.batchSize(),
+        properties.flushInterval());
+  }
+
+  /** Métricas do pool de scripts. */
+  @Bean
+  io.micrometer.core.instrument.binder.MeterBinder scriptPoolMetrics(WorkerPool pool) {
+    return registry ->
+        io.micrometer.core.instrument.Gauge.builder(
+                "liberty.script.workers", pool, WorkerPool::workers)
+            .description("Processos trabalhadores de script vivos")
+            .register(registry);
+  }
+
+  @Bean
+  AuditMaintenance auditMaintenance(
+      javax.sql.DataSource coreDataSource, LibertyAuditProperties properties) {
+    return new AuditMaintenance(
+        new org.springframework.jdbc.core.JdbcTemplate(coreDataSource), properties);
   }
 }

@@ -23,6 +23,10 @@ spring:
       fail-on-unknown-properties: true
 
 liberty:
+  metrics:
+    # Conta técnica do /actuator/prometheus; sem senha o endpoint fica fechado
+    username: metrics
+    password: ${LIBERTY_METRICS_PASSWORD:}
   vault:
     # Cofre das senhas dos bancos dos tenants. Em produção: authentication=KUBERNETES; TOKEN só em desenvolvimento.
     uri: ${LIBERTY_VAULT_URI}
@@ -59,10 +63,24 @@ server:
       force: true
 
 management:
+  metrics:
+    tags:
+      application: liberty
+  tracing:
+    # Rastros distribuídos (OpenTelemetry): desligados por padrão; ligue com LIBERTY_TRACE_SAMPLING (0 a 1)
+    sampling:
+      probability: ${LIBERTY_TRACE_SAMPLING:0.0}
+  opentelemetry:
+    resource-attributes:
+      service.name: liberty
+    tracing:
+      export:
+        otlp:
+          endpoint: ${LIBERTY_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       probes:

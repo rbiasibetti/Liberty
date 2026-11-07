@@ -33,7 +33,7 @@ Em vez de escrever e implantar código para cada integração, você descreve a 
 - **Snapshots imutáveis:** cada versão publicada de uma integração é um documento JSON imutável, validado por JSON Schema e identificado por hash SHA-256 canônico.
 - **SQL seguro por construção:** identificadores vêm do catálogo do banco do cliente, nunca da requisição; todo valor vai como parâmetro tipado; o usuário do banco do tenant não tem DELETE nem DDL.
 - **Erros padronizados:** `application/problem+json` (RFC 9457) com violações por campo e `X-Request-Id` em toda resposta, sem vazar detalhes do banco.
-- **Pronto para operar:** manifestos Kubernetes, ambiente local completo com um comando, métricas, testes de carga noturnos e esteira de CI/CD com varreduras de segurança.
+- **Pronto para operar:** manifestos Kubernetes, ambiente local completo com um comando, métricas, cenários de carga k6 e esteira de CI com CodeQL e varredura de segredos.
 
 ## Como funciona
 

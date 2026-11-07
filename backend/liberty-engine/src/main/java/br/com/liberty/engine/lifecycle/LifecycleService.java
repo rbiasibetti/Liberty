@@ -27,8 +27,10 @@ import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -48,7 +50,32 @@ public class LifecycleService {
 
   /** Integração cadastrada. */
   public record IntegrationView(
-      String key, String name, String method, String route, boolean archived) {}
+      String key,
+      String name,
+      String method,
+      String route,
+      boolean archived,
+      Integer draftVersionNo,
+      Integer hmlVersionNo,
+      Integer prdVersionNo,
+      long calls24h,
+      long errors24h) {}
+
+  /** Tabela ou view do banco do tenant (para o editor de mapeamento). */
+  public record TableView(String schema, String name, String kind) {}
+
+  /** Coluna como o catálogo a descreve, com o que o motor precisa saber para gravar. */
+  public record ColumnView(
+      String name,
+      String type,
+      String kind,
+      boolean nullable,
+      boolean primaryKey,
+      boolean generated,
+      boolean required) {}
+
+  /** Tabela e suas colunas. */
+  public record TableDetail(String schema, String name, String kind, List<ColumnView> columns) {}
 
   /** Versão de uma integração. */
   public record VersionView(
@@ -134,12 +161,120 @@ public class LifecycleService {
     }
   }
 
+  /**
+   * Integrações com o rascunho pendente, a versão ativa em cada ambiente e a saúde das últimas 24 h
+   * (chamadas e erros 5xx da auditoria).
+   */
   @Transactional(readOnly = true)
   public List<IntegrationView> list(String slug) {
     TenantEntity tenant = tenant(slug);
-    return integrations.findByTenantIdAndArchivedFalseOrderByIntegrationKey(tenant.getId()).stream()
-        .map(LifecycleService::view)
-        .toList();
+    Map<Long, Integer> hml = activeVersions(tenant, EnvironmentKind.HML);
+    Map<Long, Integer> prd = activeVersions(tenant, EnvironmentKind.PRD);
+    Map<String, long[]> health = health(tenant);
+    List<IntegrationView> result = new ArrayList<>();
+    for (IntegrationEntity i :
+        integrations.findByTenantIdAndArchivedFalseOrderByIntegrationKey(tenant.getId())) {
+      Integer draft =
+          versions
+              .findByIntegrationIdAndTenantIdAndState(i.getId(), tenant.getId(), VersionState.DRAFT)
+              .map(IntegrationVersionEntity::getVersionNo)
+              .orElse(null);
+      long[] h = health.getOrDefault(i.getIntegrationKey(), new long[2]);
+      result.add(
+          new IntegrationView(
+              i.getIntegrationKey(),
+              i.getName(),
+              i.getHttpMethod(),
+              i.getRoutePattern(),
+              i.isArchived(),
+              draft,
+              hml.get(i.getId()),
+              prd.get(i.getId()),
+              h[0],
+              h[1]));
+    }
+    return result;
+  }
+
+  private Map<Long, Integer> activeVersions(TenantEntity tenant, EnvironmentKind environment) {
+    Map<Long, Integer> active = new HashMap<>();
+    for (var row : publications.findServed(tenant.getId(), environment)) {
+      active.put(row.integrationId(), row.versionNo());
+    }
+    return active;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, long[]> health(TenantEntity tenant) {
+    List<Object[]> rows =
+        entityManager
+            .createNativeQuery(
+                "SELECT integration_key, COUNT(*), SUM(CASE WHEN status_code >= 500 THEN 1 ELSE 0 END)"
+                    + " FROM int_audit_execution WHERE tenant_id = :tenant AND created_at >= :since"
+                    + " GROUP BY integration_key")
+            .setParameter("tenant", tenant.getId())
+            .setParameter("since", Instant.now().minusSeconds(24 * 3600))
+            .getResultList();
+    Map<String, long[]> health = new HashMap<>();
+    for (Object[] row : rows) {
+      health.put(
+          (String) row[0],
+          new long[] {
+            ((Number) row[1]).longValue(), row[2] == null ? 0 : ((Number) row[2]).longValue()
+          });
+    }
+    return health;
+  }
+
+  /** Tabelas e views do banco do tenant no ambiente (HML ou PRD), para autocompletar. */
+  public List<TableView> catalogTables(String slug, EnvironmentKind environment) {
+    tenant(slug);
+    TenantScope scope = new TenantScope(new TenantId(slug), environment);
+    try {
+      return catalog.listTables(scope).stream()
+          .map(t -> new TableView(t.schema(), t.name(), t.kind().name()))
+          .toList();
+    } catch (TenantUnavailableException e) {
+      throw catalogUnavailable();
+    }
+  }
+
+  /** Colunas de uma tabela do banco do tenant. */
+  public TableDetail catalogTable(String slug, EnvironmentKind environment, String reference) {
+    tenant(slug);
+    TenantScope scope = new TenantScope(new TenantId(slug), environment);
+    try {
+      var table = catalog.table(scope, reference);
+      return new TableDetail(
+          table.schema(),
+          table.name(),
+          table.kind().name(),
+          table.columns().stream()
+              .map(
+                  c ->
+                      new ColumnView(
+                          c.name(),
+                          c.typeName(),
+                          c.kind().name(),
+                          c.nullable(),
+                          c.primaryKey(),
+                          c.generated(),
+                          c.required()))
+              .toList());
+    } catch (UnknownDatabaseObjectException
+        | br.com.liberty.domain.catalog.InvalidIdentifierException e) {
+      throw notFound();
+    } catch (TenantUnavailableException e) {
+      throw catalogUnavailable();
+    }
+  }
+
+  private static ProblemException catalogUnavailable() {
+    return new ProblemException(
+        503,
+        "tenant-unavailable",
+        "Serviço indisponível",
+        "O banco do cliente está indisponível neste ambiente");
   }
 
   @Transactional(readOnly = true)
@@ -491,7 +626,16 @@ public class LifecycleService {
 
   private static IntegrationView view(IntegrationEntity i) {
     return new IntegrationView(
-        i.getIntegrationKey(), i.getName(), i.getHttpMethod(), i.getRoutePattern(), i.isArchived());
+        i.getIntegrationKey(),
+        i.getName(),
+        i.getHttpMethod(),
+        i.getRoutePattern(),
+        i.isArchived(),
+        null,
+        null,
+        null,
+        0,
+        0);
   }
 
   private static VersionView view(IntegrationVersionEntity v) {

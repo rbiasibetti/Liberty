@@ -437,4 +437,87 @@ class LifecycleContractTest {
     assertThat(call(post(base("papeis") + "/versions/9/sandbox"), "ana", "{}").getStatus())
         .isEqualTo(404);
   }
+
+  @Test
+  void theListShowsDraftsActiveVersionsPerEnvironmentAndHealth() throws Exception {
+    submitted("saude", "/saude", "dbo.tb_cliente");
+    assertThat(publish("saude", 1, "HML", "bia")).isEqualTo(200);
+    call(
+        post("/api/v1/tenants/acme/integrations"),
+        "ana",
+        "{\"key\":\"so-rascunho\",\"name\":\"x\",\"method\":\"GET\",\"route\":\"/so-rascunho\"}");
+    call(
+        put(base("so-rascunho") + "/draft"),
+        "ana",
+        snapshot("so-rascunho", "/so-rascunho", "dbo.tb_cliente"));
+
+    var list = call(get("/api/v1/tenants/acme/integrations"), "dan", null);
+
+    assertThat(list.getStatus()).isEqualTo(200);
+    var items =
+        (java.util.List<?>)
+            com.nimbusds.jose.util.JSONObjectUtils.parse(
+                    "{\"i\":" + list.getContentAsString() + "}")
+                .get("i");
+    @SuppressWarnings("unchecked")
+    var saude =
+        items.stream()
+            .map(o -> (Map<String, Object>) o)
+            .filter(m -> "saude".equals(m.get("key")))
+            .findFirst()
+            .orElseThrow();
+    @SuppressWarnings("unchecked")
+    var rascunho =
+        items.stream()
+            .map(o -> (Map<String, Object>) o)
+            .filter(m -> "so-rascunho".equals(m.get("key")))
+            .findFirst()
+            .orElseThrow();
+    assertThat(saude)
+        .containsEntry("hmlVersionNo", 1L)
+        .containsEntry("calls24h", 0L)
+        .containsEntry("errors24h", 0L);
+    assertThat(saude.get("prdVersionNo")).isNull();
+    assertThat(saude.get("draftVersionNo")).isNull();
+    assertThat(rascunho).containsEntry("draftVersionNo", 1L);
+    assertThat(rascunho.get("hmlVersionNo")).isNull();
+  }
+
+  @Test
+  void theCatalogOfTheTenantDatabaseFeedsTheMappingEditor() throws Exception {
+    var tables = call(get("/api/v1/tenants/acme/environments/hml/catalog/tables"), "ana", null);
+    var detail =
+        call(
+            get("/api/v1/tenants/acme/environments/HML/catalog/tables/dbo.tb_cliente"),
+            "ana",
+            null);
+
+    assertThat(tables.getStatus()).isEqualTo(200);
+    assertThat(tables.getContentAsString()).contains("tb_cliente").contains("\"kind\":\"TABLE\"");
+    assertThat(detail.getStatus()).isEqualTo(200);
+    assertThat(detail.getContentAsString())
+        .contains("\"codigo\"")
+        .contains("\"primaryKey\":true")
+        .contains("\"required\":true");
+    assertThat(
+            call(
+                    get("/api/v1/tenants/acme/environments/HML/catalog/tables/dbo.nao_existe"),
+                    "ana",
+                    null)
+                .getStatus())
+        .isEqualTo(404);
+    assertThat(
+            call(get("/api/v1/tenants/acme/environments/HML/catalog/tables/x;drop"), "ana", null)
+                .getStatus())
+        .isIn(400, 404);
+    assertThat(
+            call(get("/api/v1/tenants/acme/environments/HML/catalog/tables"), "dan", null)
+                .getStatus())
+        .as("VIEWER não vê o catálogo")
+        .isEqualTo(403);
+    assertThat(
+            call(get("/api/v1/tenants/acme/environments/xyz/catalog/tables"), "ana", null)
+                .getStatus())
+        .isEqualTo(400);
+  }
 }

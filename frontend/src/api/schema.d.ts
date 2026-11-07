@@ -229,6 +229,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{slug}/environments/{env}/catalog/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+            };
+            cookie?: never;
+        };
+        /** Tabelas e views do banco do tenant no ambiente */
+        get: operations["listCatalogTables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{slug}/environments/{env}/catalog/tables/{table}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+                /** @description Referência da tabela, por exemplo dbo.tb_pedido */
+                table: string;
+            };
+            cookie?: never;
+        };
+        /** Colunas de uma tabela do banco do tenant */
+        get: operations["getCatalogTable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/{slug}/environments/{env}/openapi.json": {
         parameters: {
             query?: never;
@@ -269,6 +311,53 @@ export interface components {
             method: "GET" | "POST" | "PUT" | "PATCH";
             route: string;
             archived: boolean;
+            /**
+             * Format: int32
+             * @description Rascunho pendente
+             */
+            draftVersionNo?: number | null;
+            /**
+             * Format: int32
+             * @description Versão ativa em HML
+             */
+            hmlVersionNo?: number | null;
+            /**
+             * Format: int32
+             * @description Versão ativa em PRD
+             */
+            prdVersionNo?: number | null;
+            /**
+             * Format: int64
+             * @description Execuções nas últimas 24 h
+             */
+            calls24h: number;
+            /**
+             * Format: int64
+             * @description Execuções com erro 5xx nas últimas 24 h
+             */
+            errors24h: number;
+        };
+        CatalogTable: {
+            schema: string;
+            name: string;
+            /** @enum {string} */
+            kind: "TABLE" | "VIEW";
+        };
+        CatalogColumn: {
+            name: string;
+            type: string;
+            kind: string;
+            nullable: boolean;
+            primaryKey: boolean;
+            generated: boolean;
+            required: boolean;
+        };
+        CatalogTableDetail: {
+            schema: string;
+            name: string;
+            /** @enum {string} */
+            kind: "TABLE" | "VIEW";
+            columns: components["schemas"]["CatalogColumn"][];
         };
         CreateIntegration: {
             key: string;
@@ -674,6 +763,56 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listCatalogTables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tabelas e views visíveis ao usuário do tenant */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogTable"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getCatalogTable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                env: components["parameters"]["Env"];
+                /** @description Referência da tabela, por exemplo dbo.tb_pedido */
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tabela e colunas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogTableDetail"];
+                };
             };
             default: components["responses"]["Problem"];
         };

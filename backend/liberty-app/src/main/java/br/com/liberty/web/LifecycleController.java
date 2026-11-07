@@ -160,6 +160,20 @@ class LifecycleController {
     return ResponseEntity.noContent().build();
   }
 
+  @GetMapping("/environments/{env}/catalog/tables")
+  @PreAuthorize("@tenantAccess.hasRole(authentication, #slug, 'INTEGRATOR')")
+  List<LifecycleService.TableView> catalogTables(
+      @PathVariable String slug, @PathVariable String env) {
+    return service.catalogTables(slug, environment(env));
+  }
+
+  @GetMapping("/environments/{env}/catalog/tables/{table:.+}")
+  @PreAuthorize("@tenantAccess.hasRole(authentication, #slug, 'INTEGRATOR')")
+  LifecycleService.TableDetail catalogTable(
+      @PathVariable String slug, @PathVariable String env, @PathVariable String table) {
+    return service.catalogTable(slug, environment(env), table);
+  }
+
   @GetMapping("/environments/{env}/openapi.json")
   @PreAuthorize("@tenantAccess.hasRole(authentication, #slug, 'VIEWER')")
   ObjectNode openApi(@PathVariable String slug, @PathVariable String env) {

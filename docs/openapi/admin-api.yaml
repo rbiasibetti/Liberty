@@ -201,6 +201,41 @@ paths:
         "204":
           description: Despublicada
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/environments/{env}/catalog/tables:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Env"
+    get:
+      operationId: listCatalogTables
+      summary: Tabelas e views do banco do tenant no ambiente
+      responses:
+        "200":
+          description: Tabelas e views visíveis ao usuário do tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CatalogTable" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/environments/{env}/catalog/tables/{table}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - $ref: "#/components/parameters/Env"
+      - name: table
+        in: path
+        required: true
+        description: Referência da tabela, por exemplo dbo.tb_pedido
+        schema: { type: string }
+    get:
+      operationId: getCatalogTable
+      summary: Colunas de uma tabela do banco do tenant
+      responses:
+        "200":
+          description: Tabela e colunas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CatalogTableDetail" }
+        default: { $ref: "#/components/responses/Problem" }
   /api/v1/tenants/{slug}/environments/{env}/openapi.json:
     parameters:
       - $ref: "#/components/parameters/Slug"
@@ -264,13 +299,46 @@ components:
             items: { $ref: "#/components/schemas/TenantRole" }
     Integration:
       type: object
-      required: [key, name, method, route, archived]
+      required: [key, name, method, route, archived, calls24h, errors24h]
       properties:
         key: { type: string }
         name: { type: string }
         method: { type: string, enum: [GET, POST, PUT, PATCH] }
         route: { type: string }
         archived: { type: boolean }
+        draftVersionNo: { type: [integer, "null"], format: int32, description: Rascunho pendente }
+        hmlVersionNo: { type: [integer, "null"], format: int32, description: Versão ativa em HML }
+        prdVersionNo: { type: [integer, "null"], format: int32, description: Versão ativa em PRD }
+        calls24h: { type: integer, format: int64, description: Execuções nas últimas 24 h }
+        errors24h: { type: integer, format: int64, description: Execuções com erro 5xx nas últimas 24 h }
+    CatalogTable:
+      type: object
+      required: [schema, name, kind]
+      properties:
+        schema: { type: string }
+        name: { type: string }
+        kind: { type: string, enum: [TABLE, VIEW] }
+    CatalogColumn:
+      type: object
+      required: [name, type, kind, nullable, primaryKey, generated, required]
+      properties:
+        name: { type: string }
+        type: { type: string }
+        kind: { type: string }
+        nullable: { type: boolean }
+        primaryKey: { type: boolean }
+        generated: { type: boolean }
+        required: { type: boolean }
+    CatalogTableDetail:
+      type: object
+      required: [schema, name, kind, columns]
+      properties:
+        schema: { type: string }
+        name: { type: string }
+        kind: { type: string, enum: [TABLE, VIEW] }
+        columns:
+          type: array
+          items: { $ref: "#/components/schemas/CatalogColumn" }
     CreateIntegration:
       type: object
       required: [key, name, method, route]

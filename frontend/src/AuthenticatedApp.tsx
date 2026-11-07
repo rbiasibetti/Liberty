@@ -2,8 +2,10 @@ import { Alert, Button, Center, Loader, Stack } from '@mantine/core';
 import { Route, Routes } from 'react-router';
 import { useApi } from './api/apiContext';
 import { AppLayout } from './layout/AppLayout';
-import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { EditorPage } from './screens/EditorPage';
+import { IntegrationsPage } from './screens/IntegrationsPage';
+import { ReviewPage } from './screens/ReviewPage';
 import { TenantProvider } from './tenant/TenantProvider';
 import { useTenant } from './tenant/tenantContext';
 
@@ -31,7 +33,9 @@ function Gate() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<IntegrationsPage />} />
+        <Route path="integracoes/:key" element={<EditorPage />} />
+        <Route path="integracoes/:key/versoes/:no" element={<ReviewPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

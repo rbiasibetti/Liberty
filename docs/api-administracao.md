@@ -4,7 +4,7 @@ Para usuários autenticados pelo provedor OIDC (token de usuário, nunca o de si
 
 | Método e caminho | Papel mínimo | O que faz |
 | --- | --- | --- |
-| `GET /integrations` | VIEWER | Lista as integrações |
+| `GET /integrations` | VIEWER | Lista as integrações, com a versão ativa em HML e PRD, o rascunho pendente e as chamadas e erros 5xx das últimas 24 h |
 | `POST /integrations` | INTEGRATOR | Cria `{key, name, method, route}` (201; 409 se já existe) |
 | `GET /integrations/{key}/versions` | VIEWER | Versões, estado, autor e revisor |
 | `GET /integrations/{key}/versions/{no}/snapshot` | VIEWER | Snapshot da versão |
@@ -16,6 +16,8 @@ Para usuários autenticados pelo provedor OIDC (token de usuário, nunca o de si
 | `POST /integrations/{key}/environments/{env}/rollback` | PUBLISHER | Volta à publicação anterior |
 | `DELETE /integrations/{key}/environments/{env}/publication` | PUBLISHER | Despublica (204) |
 | `GET /environments/{env}/openapi.json` | VIEWER | OpenAPI das integrações publicadas |
+| `GET /environments/{env}/catalog/tables` | INTEGRATOR | Tabelas e views do banco do tenant no ambiente |
+| `GET /environments/{env}/catalog/tables/{tabela}` | INTEGRATOR | Colunas da tabela (tipo, nulabilidade, chave primária, gerada, obrigatória) |
 
 Regras: quem escreveu a versão não a rejeita nem a publica (403); PRD exige publicação prévia em HML (409); snapshot inválido ou que falha nas conferências volta em 422 com `errors[]` por campo; publicar vale na hora na instância e em até 5 s nas demais. Erros seguem o formato `problem+json` de [api-execucao.md](api-execucao.md).
 

@@ -18,7 +18,14 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/main.tsx', 'src/api/schema.d.ts', 'src/test/**', 'src/**/*.test.{ts,tsx}'],
+      exclude: [
+        'src/main.tsx',
+        'src/api/schema.d.ts',
+        'src/test/**',
+        // o Monaco só roda num navegador de verdade: nos testes ele é substituído por um campo de texto
+        'src/editor/**',
+        'src/**/*.test.{ts,tsx}',
+      ],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },
   },

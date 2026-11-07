@@ -69,3 +69,17 @@ export function json(body: unknown, init: ResponseInit = {}): Response {
     ...init,
   });
 }
+
+/** Primeiro elemento de uma lista de resultados de busca (falha se vier vazia). */
+export function first<T>(items: T[]): T {
+  return nth(items, 0);
+}
+
+/** Elemento de posição `index` de uma lista de resultados (falha se não existir). */
+export function nth<T>(items: T[], index: number): T {
+  const item = items[index];
+  if (item === undefined) {
+    throw new Error('Nenhum elemento encontrado');
+  }
+  return item;
+}

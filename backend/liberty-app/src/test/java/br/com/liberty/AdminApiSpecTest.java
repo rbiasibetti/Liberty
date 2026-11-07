@@ -56,7 +56,9 @@ class AdminApiSpecTest {
         if (mapping == null) {
           continue;
         }
-        String path = prefix + (mapping.path().length == 0 ? "" : mapping.path()[0]);
+        String path =
+            (prefix + (mapping.path().length == 0 ? "" : mapping.path()[0]))
+                .replaceAll("\\{(\\w+):[^}]+\\}", "{$1}");
         for (RequestMethod verb : mapping.method()) {
           endpoints.add(verb.name() + " " + path);
         }

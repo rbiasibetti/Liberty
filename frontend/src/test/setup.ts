@@ -28,6 +28,14 @@ class ResizeObserverStub {
   }
 }
 window.ResizeObserver = ResizeObserverStub;
+// o Textarea com autosize do Mantine escuta o carregamento de fontes
+Object.defineProperty(document, 'fonts', {
+  value: {
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    ready: Promise.resolve(),
+  },
+});
 window.HTMLElement.prototype.scrollIntoView = () => undefined;
 
 afterEach(() => {

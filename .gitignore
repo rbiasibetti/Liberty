@@ -28,3 +28,6 @@ proposta.odt.lock
 
 # senha local do scrape de métricas
 deploy/local/prometheus/.metrics_password
+
+# artefato do tsc --build
+*.tsbuildinfo

@@ -14,7 +14,7 @@
   <description>Prova de conceito descartável: contenção de scripts hostis no GraalJS Community</description>
 
   <properties>
-    <graal.version>25.0.5</graal.version>
+    <graal.version>25.5.5.0.3</graal.version>
     <jacoco.skip>true</jacoco.skip>
   </properties>
 

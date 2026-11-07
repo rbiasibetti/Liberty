@@ -13,6 +13,7 @@ import br.com.liberty.engine.route.PublishedRoutes;
 import br.com.liberty.engine.route.RouteMatch;
 import br.com.liberty.engine.route.RouteTable;
 import br.com.liberty.engine.script.ScriptHooks;
+import br.com.liberty.engine.traffic.TrafficGuard;
 import br.com.liberty.engine.write.WriteEngine;
 import br.com.liberty.engine.write.WriteRequest;
 import br.com.liberty.engine.write.WriteResult;
@@ -57,6 +58,7 @@ class ExecutionController {
   private final WriteEngine writes;
   private final ScriptHooks scripts;
   private final AuditRecorder audit;
+  private final TrafficGuard guard;
   private final MeterRegistry meters;
 
   ExecutionController(
@@ -65,7 +67,9 @@ class ExecutionController {
       WriteEngine writes,
       ScriptHooks scripts,
       AuditRecorder audit,
+      TrafficGuard guard,
       MeterRegistry meters) {
+    this.guard = guard;
     this.scripts = scripts;
     this.audit = audit;
     this.meters = meters;
@@ -89,7 +93,7 @@ class ExecutionController {
     Seen seen = new Seen();
     long start = System.nanoTime();
     RequestTimings.begin();
-    try {
+    try (TrafficGuard.Permit permit = guard.admit(scope)) {
       ResponseEntity<Object> response = handle(request, authentication, scope, seen);
       seen.status = response.getStatusCode().value();
       return response;

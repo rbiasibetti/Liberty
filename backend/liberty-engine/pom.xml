@@ -12,6 +12,10 @@
   <name>Liberty Engine</name>
   <description>Motor de execução das integrações publicadas: roteamento, validação, leitura e escrita</description>
 
+  <properties>
+    <bucket4j.version>8.22.0</bucket4j.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>br.com.liberty</groupId>
@@ -28,6 +32,20 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j_jdk17-core</artifactId>
+      <version>${bucket4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j_jdk17-lettuce</artifactId>
+      <version>${bucket4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.lettuce</groupId>
+      <artifactId>lettuce-core</artifactId>
     </dependency>
     <dependency>
       <groupId>br.com.liberty</groupId>

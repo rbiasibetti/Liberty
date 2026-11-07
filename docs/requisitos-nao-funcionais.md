@@ -26,7 +26,7 @@ Medidos no servidor, por tenant e por integração, em janela de 30 dias, exclui
 | Latência extra do script (pool de trabalhadores) | p95 abaixo de 50 ms em scripts de até 2.000 instruções | `liberty.script.duration` |
 | Publicação de versão (da aprovação à ativação) | p95 abaixo de 10 s | auditoria |
 | Rollback para a versão anterior | abaixo de 60 s | auditoria |
-| Isolamento entre tenants: tenant a 10 vezes seu plano não altera o p95 dos demais | variação menor que 20% | teste `noisy-neighbor` |
+| Isolamento entre tenants: tenant a 10 vezes seu plano não altera o p95 dos demais | variação menor que 20% | teste `noisy-neighbor` (k6, `loadtest/scenarios/vizinho-barulhento.js`); ADR 0030 |
 | Perda de eventos de auditoria | 0 em operação normal; qualquer descarte gera alerta | `liberty.audit.dropped` |
 
 Política de orçamento de erro: com 50% do orçamento mensal consumido, mudanças que não sejam correções ficam congeladas até o fim da janela.

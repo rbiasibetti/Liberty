@@ -41,6 +41,10 @@ GET /acme/api/pedidos?cliente=2&periodo=2026-01-05,2026-01-07&sort=-vl_total&lim
 
 Integrações podem ter scripts JavaScript que ajustam o corpo antes da gravação (`beforeExecute`) e a resposta (`afterExecute`), e recusar a operação com um status 4xx. Para o consumidor, isso aparece como: `script-rejected` (o status e a mensagem escolhidos pela integração; em escrita, nada é gravado), `script-timeout` (504), `script-error` (500) ou `script-unavailable` (503, tente de novo).
 
+## Limites do plano
+
+Cada tenant tem um limite de requisições por segundo (com rajada) e de execuções simultâneas, definidos pelo plano; o padrão é 50 por segundo, rajada de 100 e 20 simultâneas. Passou do limite, a resposta é `429` imediata, antes de tocar o banco do cliente, com `Retry-After` em segundos. O limite é por tenant: um tenant que excede o plano não afeta os demais. Corpo de escrita: até 5 MB e 10.000 itens por lista.
+
 ## Erros
 
 Sempre `application/problem+json`, com o mesmo identificador no corpo (`requestId`) e no cabeçalho `X-Request-Id` (você pode enviar o seu: 8 a 64 caracteres entre letras, números, `.`, `_` e `-`).
@@ -65,7 +69,7 @@ Sempre `application/problem+json`, com o mesmo identificador no corpo (`requestI
 | 405 | A rota existe para outro método; o cabeçalho `Allow` lista os aceitos |
 | 409 | Registro único ambíguo, chave duplicada, restrição violada, ou conflito de idempotência |
 | 413 | Corpo ou número de linhas acima do limite |
-| 429 | Scripts demais em execução (`Retry-After`) |
+| 429 | Limite do plano: taxa (`rate-limited`, com `Retry-After`, `RateLimit-Limit` e `RateLimit-Remaining`), execuções simultâneas (`tenant-busy`) ou scripts demais; tente de novo depois de `Retry-After` |
 | 415 | Escrita com corpo que não é `application/json` |
 | 422 | Algum valor não é aceito pelo banco do cliente |
 | 503 | Banco do cliente indisponível, schema alterado ou conflito de concorrência; tente de novo (`Retry-After` quando houver) |

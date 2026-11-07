@@ -210,7 +210,7 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Ciclo de vida das integrações (rascunho, revisão, publicação por ambiente, rollback) e OpenAPI gerado
 - [x] Sandbox de execução em HML com rollback, rastro de SQL e logs
 - [x] Auditoria assíncrona, partições mensais com arquivamento, métricas Prometheus, rastros OpenTelemetry, dashboard e alertas
-- [ ] Proteção de tráfego (limites de taxa)
+- [x] Proteção de tráfego: limite de taxa por plano (Bucket4j com Redis opcional), bulkhead e 429
 - [ ] Interface web de administração e testes de ponta a ponta
 - [ ] Fase 2 (recursos avançados)
 

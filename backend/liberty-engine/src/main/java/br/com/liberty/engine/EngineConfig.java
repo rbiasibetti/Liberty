@@ -11,6 +11,9 @@ import br.com.liberty.engine.sandbox.SandboxService;
 import br.com.liberty.engine.script.LibertyScriptProperties;
 import br.com.liberty.engine.script.ScriptHooks;
 import br.com.liberty.engine.script.WorkerScriptHooks;
+import br.com.liberty.engine.traffic.Bucket4jRateLimiter;
+import br.com.liberty.engine.traffic.LibertyLimitProperties;
+import br.com.liberty.engine.traffic.TrafficGuard;
 import br.com.liberty.engine.write.FieldTransformer;
 import br.com.liberty.engine.write.IdempotencyService;
 import br.com.liberty.engine.write.JpaIdempotencyService;
@@ -37,7 +40,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @EnableConfigurationProperties({
   LibertyEngineProperties.class,
   LibertyScriptProperties.class,
-  LibertyAuditProperties.class
+  LibertyAuditProperties.class,
+  LibertyLimitProperties.class
 })
 public class EngineConfig {
 
@@ -181,5 +185,31 @@ public class EngineConfig {
       javax.sql.DataSource coreDataSource, LibertyAuditProperties properties) {
     return new AuditMaintenance(
         new org.springframework.jdbc.core.JdbcTemplate(coreDataSource), properties);
+  }
+
+  @Bean(destroyMethod = "close")
+  Bucket4jRateLimiter rateLimiter(
+      LibertyLimitProperties properties, io.micrometer.core.instrument.MeterRegistry meters) {
+    return new Bucket4jRateLimiter(properties.redisUri(), properties.redisKeyPrefix(), meters);
+  }
+
+  /** Admissão por tenant: o plano vem de {@code int_tenant.plan_code}, com cache. */
+  @Bean
+  TrafficGuard trafficGuard(
+      Bucket4jRateLimiter limiter,
+      LibertyLimitProperties properties,
+      javax.sql.DataSource coreDataSource,
+      io.micrometer.core.instrument.MeterRegistry meters) {
+    var jdbc = new org.springframework.jdbc.core.JdbcTemplate(coreDataSource);
+    return new TrafficGuard(
+        limiter,
+        properties,
+        slug -> {
+          var found =
+              jdbc.queryForList(
+                  "SELECT plan_code FROM int_tenant WHERE slug = ?", String.class, slug);
+          return found.isEmpty() ? "STANDARD" : found.getFirst();
+        },
+        meters);
   }
 }

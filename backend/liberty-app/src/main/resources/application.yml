@@ -23,6 +23,13 @@ spring:
       fail-on-unknown-properties: true
 
 liberty:
+  limits:
+    # Padrão do plano (docs/requisitos-nao-funcionais.md); planos maiores em liberty.limits.plans.<PLANO>
+    rate-per-second: 50
+    burst: 100
+    max-concurrent: 20
+    # Com Redis o limite de taxa soma todas as instâncias; sem ele vale por instância. Ex.: redis://:senha@host:6379
+    redis-uri: ${LIBERTY_REDIS_URI:}
   metrics:
     # Conta técnica do /actuator/prometheus; sem senha o endpoint fica fechado
     username: metrics

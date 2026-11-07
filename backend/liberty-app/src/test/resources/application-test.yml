@@ -1,0 +1,12 @@
+liberty:
+  vault:
+    uri: http://127.0.0.1:8200
+    token: teste
+  security:
+    issuer: http://liberty.test
+    client-cache-ttl: 200ms
+    keys:
+      store: MEMORY
+    oidc:
+      issuer: http://127.0.0.1:1/realms/indisponivel
+    allowed-origins: http://localhost:5173

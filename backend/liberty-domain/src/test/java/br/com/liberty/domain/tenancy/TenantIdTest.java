@@ -39,6 +39,12 @@ class TenantIdTest {
     assertThatThrownBy(() -> new TenantId(slug)).isInstanceOf(IllegalArgumentException.class);
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"api", "oauth2", "actuator", "admin", "platform"})
+  void rejectsSlugsReservedForPlatformRoutes(String slug) {
+    assertThatThrownBy(() -> new TenantId(slug)).isInstanceOf(IllegalArgumentException.class);
+  }
+
   @Test
   void rejectsNull() {
     assertThatNullPointerException().isThrownBy(() -> new TenantId(null));

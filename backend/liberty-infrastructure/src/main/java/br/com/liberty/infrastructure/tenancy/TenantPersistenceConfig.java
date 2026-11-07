@@ -73,8 +73,13 @@ public class TenantPersistenceConfig {
   }
 
   @Bean
-  SecretProvider secretProvider(LibertyVaultProperties properties) {
-    return new VaultSecretProvider(vaultTemplate(properties), properties.mount());
+  VaultTemplate vault(LibertyVaultProperties properties) {
+    return vaultTemplate(properties);
+  }
+
+  @Bean
+  SecretProvider secretProvider(VaultTemplate vault, LibertyVaultProperties properties) {
+    return new VaultSecretProvider(vault, properties.mount());
   }
 
   static VaultTemplate vaultTemplate(LibertyVaultProperties properties) {

@@ -87,11 +87,18 @@ class TenantPoolRegistryTest {
             },
             Duration.ofMinutes(30));
     jdbc = new NamedParameterJdbcTemplate(new TenantRoutingDataSource(registry));
+    // aquece um tenant por vez: o teste de concorrência mede roteamento, não a latência de login de
+    // 150
+    // conexões abertas ao mesmo tempo num SQL Server de laptop
+    for (TenantScope scope : SCOPES) {
+      marker(scope);
+    }
   }
 
   @AfterAll
   static void closePools() {
     registry.destroy();
+    CoreTestDatabase.dropAll();
   }
 
   @AfterEach

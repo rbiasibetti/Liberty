@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -34,6 +35,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * A fiação completa: core, cofre (falso, via HTTP), registro de tenants e JdbcTemplate de tenant.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 class TenancyWiringTest {
 
   private static final CoreTestDatabase.Scratch TENANT_DB = CoreTestDatabase.create();

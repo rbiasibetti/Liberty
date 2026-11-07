@@ -46,7 +46,7 @@ class CoreSchemaTest {
   static void migrate() throws SQLException {
     db = CoreTestDatabase.create();
     Flyway flyway = flyway();
-    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
+    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
     connection = DriverManager.getConnection(db.url(), db.user(), db.password());
   }
 
@@ -150,6 +150,14 @@ class CoreSchemaTest {
 
     found.remove("int_flyway_schema_history");
     assertThat(found).containsExactlyInAnyOrderElementsOf(TABLES);
+  }
+
+  @Test
+  void reservedSlugsCannotBeTenants() {
+    for (String reserved : new String[] {"api", "oauth2", "actuator", "platform"}) {
+      assertSqlError(
+          () -> sql("INSERT INTO int_tenant (slug, name) VALUES (?, N'x')", reserved), CHECK_OR_FK);
+    }
   }
 
   @Test

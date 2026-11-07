@@ -23,6 +23,7 @@ public final class CoreTestDatabase {
   private record Admin(String jdbcBase, String user, String password) {}
 
   private static final String IMAGE = "mcr.microsoft.com/mssql/server:2022-CU27-ubuntu-22.04";
+  private static final Object CREATE_LOCK = new Object();
   private static final List<String> CREATED = new ArrayList<>();
   private static Admin admin;
 
@@ -33,7 +34,10 @@ public final class CoreTestDatabase {
     String name =
         "liberty_core_test_"
             + HexFormat.of().formatHex(UUID.randomUUID().toString().getBytes()).substring(0, 12);
-    execute("master", "CREATE DATABASE [" + name + "] COLLATE Latin1_General_100_CI_AS_SC_UTF8");
+    // CREATE DATABASE bloqueia o banco model: criações simultâneas colidem, então são serializadas
+    synchronized (CREATE_LOCK) {
+      execute("master", "CREATE DATABASE [" + name + "] COLLATE Latin1_General_100_CI_AS_SC_UTF8");
+    }
     synchronized (CREATED) {
       CREATED.add(name);
     }
@@ -87,19 +91,30 @@ public final class CoreTestDatabase {
     }
   }
 
-  private static void dropAll() {
-    for (String name : List.copyOf(CREATED)) {
-      try {
-        execute(
-            "master",
-            "ALTER DATABASE ["
-                + name
-                + "] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ["
-                + name
-                + "]");
-      } catch (IllegalStateException ignored) {
-        // melhor esforço: o banco de teste é descartável
-      }
+  /**
+   * Apaga todos os bancos criados até aqui, em paralelo (50 bancos em série estouram o prazo de
+   * saída da JVM).
+   */
+  public static void dropAll() {
+    List<String> names;
+    synchronized (CREATED) {
+      names = List.copyOf(CREATED);
+      CREATED.clear();
     }
+    names.parallelStream()
+        .forEach(
+            name -> {
+              try {
+                execute(
+                    "master",
+                    "ALTER DATABASE ["
+                        + name
+                        + "] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ["
+                        + name
+                        + "]");
+              } catch (IllegalStateException ignored) {
+                // melhor esforço: o banco de teste é descartável
+              }
+            });
   }
 }

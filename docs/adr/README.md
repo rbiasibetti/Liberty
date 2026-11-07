@@ -26,3 +26,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0018](0018-slos-e-capacidade.md) | E05 | SLOs e capacidade |
 | [0019](0019-persistencia-do-core.md) | E06 | Persistência do banco central |
 | [0020](0020-tenancy-em-tempo-de-execucao.md) | E07 | Tenancy em tempo de execução |
+| [0021](0021-autenticacao-e-autorizacao.md) | E08 | Autenticação e autorização |

@@ -7,6 +7,8 @@ public interface UserRoleRepository extends Repository<UserRoleEntity, UserRoleE
 
   List<UserRoleEntity> findByIdUserSubAndIdTenantId(String userSub, Long tenantId);
 
+  List<UserRoleEntity> findByIdUserSub(String userSub);
+
   UserRoleEntity save(UserRoleEntity role);
 
   void delete(UserRoleEntity role);

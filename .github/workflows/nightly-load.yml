@@ -52,6 +52,9 @@ jobs:
           LIBERTY_CORE_APP_USER: sa
           LIBERTY_CORE_APP_PASSWORD: ${{ env.SA_PASSWORD }}
           LIBERTY_VAULT_URI: http://127.0.0.1:8200 # o cofre só é consultado quando um tenant é usado
+          LIBERTY_SECURITY_ISSUER: http://127.0.0.1:8080
+          LIBERTY_SECURITY_KEYS_STORE: MEMORY # sem Vault no job; só para a carga de fumaça
+          LIBERTY_OIDC_ISSUER: http://127.0.0.1:9/realms/liberty
         run: |
           java -jar backend/liberty-app/target/liberty-app.jar > app.log 2>&1 &
           echo $! > app.pid

@@ -32,6 +32,21 @@ liberty:
     kubernetes-role: ${LIBERTY_VAULT_K8S_ROLE:liberty}
   tenancy:
     pool-idle-ttl: 30m
+  security:
+    issuer: ${LIBERTY_SECURITY_ISSUER} # URL pública desta API; vai no claim iss dos tokens de cliente
+    audience: liberty-api
+    token-ttl: 15m
+    client-cache-ttl: 15s
+    keys:
+      store: ${LIBERTY_SECURITY_KEYS_STORE:VAULT} # MEMORY só em desenvolvimento e testes
+      vault-path: liberty/jwt/keys
+      rotation-period: 90d
+      retirement-grace: 24h
+    oidc:
+      issuer: ${LIBERTY_OIDC_ISSUER} # provedor dos usuários da interface (Keycloak, Entra ID)
+      client-id: liberty-frontend
+      platform-admin-role: liberty-platform-admin
+    allowed-origins: ${LIBERTY_ALLOWED_ORIGINS:}
 
 server:
   shutdown: graceful

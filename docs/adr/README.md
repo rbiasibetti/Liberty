@@ -29,3 +29,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0021](0021-autenticacao-e-autorizacao.md) | E08 | Autenticação e autorização |
 | [0022](0022-catalogo-do-tenant-e-identificadores-sql.md) | E09 | Catálogo do tenant e identificadores SQL |
 | [0023](0023-modelo-do-snapshot.md) | E10 | Modelo do snapshot de integração |
+| [0024](0024-motor-de-leitura.md) | E11 | Motor de leitura e roteamento |

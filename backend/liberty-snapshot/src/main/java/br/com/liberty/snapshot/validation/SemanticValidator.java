@@ -80,11 +80,24 @@ public final class SemanticValidator {
     return errors;
   }
 
+  /**
+   * Parâmetros de sistema da paginação e da ordenação; integrações não podem usá-los como parâmetro
+   * próprio.
+   */
+  public static final Set<String> RESERVED_PARAMS = Set.of("limit", "offset", "sort");
+
   private static Set<String> declaredParams(JsonNode doc, List<FieldError> errors) {
     Set<String> names = new HashSet<>();
     JsonNode params = doc.path("request").path("params");
     for (int i = 0; i < params.size(); i++) {
       String name = params.get(i).path("name").asString();
+      if (RESERVED_PARAMS.contains(name.toLowerCase(Locale.ROOT))) {
+        errors.add(
+            new FieldError(
+                "/request/params/" + i + "/name",
+                "reserved_param_name",
+                "Nome reservado para paginação e ordenação"));
+      }
       if (!names.add(name)) {
         errors.add(
             new FieldError(

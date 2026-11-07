@@ -21,6 +21,7 @@
     <module>liberty-core-migrations</module>
     <module>liberty-snapshot</module>
     <module>liberty-infrastructure</module>
+    <module>liberty-engine</module>
     <module>liberty-app</module>
   </modules>
 
@@ -65,6 +66,11 @@
       <dependency>
         <groupId>br.com.liberty</groupId>
         <artifactId>liberty-core-migrations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>br.com.liberty</groupId>
+        <artifactId>liberty-engine</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

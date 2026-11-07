@@ -6,7 +6,7 @@ Plataforma multitenant de integração orientada a metadados: endpoints REST con
 
 | Pasta | Conteúdo |
 | --- | --- |
-| `backend/` | Maven multi-módulo: `liberty-domain` (Java puro), `liberty-core-migrations` (Flyway do core), `liberty-snapshot` (modelo, validação e hash do snapshot, sem Spring), `liberty-infrastructure` (JPA e adaptadores) e `liberty-app` (Spring Boot). |
+| `backend/` | Maven multi-módulo: `liberty-domain` (Java puro), `liberty-core-migrations` (Flyway do core), `liberty-snapshot` (modelo, validação e hash do snapshot, sem Spring), `liberty-engine` (roteamento e execução das integrações), `liberty-infrastructure` (JPA e adaptadores) e `liberty-app` (Spring Boot). |
 | `frontend/` | React + TypeScript + Vite. |
 | `docs/adr/` | Registros de decisão de arquitetura. |
 

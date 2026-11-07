@@ -26,6 +26,10 @@
       <artifactId>liberty-snapshot</artifactId>
     </dependency>
     <dependency>
+      <groupId>br.com.liberty</groupId>
+      <artifactId>liberty-engine</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>

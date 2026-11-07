@@ -31,3 +31,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0023](0023-modelo-do-snapshot.md) | E10 | Modelo do snapshot de integração |
 | [0024](0024-motor-de-leitura.md) | E11 | Motor de leitura e roteamento |
 | [0025](0025-motor-de-escrita.md) | E12 | Motor de escrita e idempotência |
+| [0026](0026-motor-de-scripts.md) | E14 | Motor de scripts em processos trabalhadores |

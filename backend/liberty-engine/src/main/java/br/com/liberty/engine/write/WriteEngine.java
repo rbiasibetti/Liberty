@@ -7,6 +7,7 @@ import br.com.liberty.engine.problem.ProblemException.Violation;
 import br.com.liberty.engine.read.InputParser;
 import br.com.liberty.engine.read.ParsedInput;
 import br.com.liberty.engine.route.PublishedIntegration;
+import br.com.liberty.engine.script.ScriptHooks;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
 import br.com.liberty.infrastructure.catalog.UnknownDatabaseObjectException;
 import br.com.liberty.infrastructure.tenancy.TenantUnavailableException;
@@ -18,6 +19,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.networknt.schema.Schema;
 import java.sql.SQLTimeoutException;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -49,6 +51,7 @@ public final class WriteEngine {
   private final Materializer materializer;
   private final TransactionTemplate transaction;
   private final IdempotencyService idempotency;
+  private final ScriptHooks scripts;
   private final Cache<Long, Schema> schemas = Caffeine.newBuilder().maximumSize(500).build();
 
   public WriteEngine(
@@ -58,6 +61,18 @@ public final class WriteEngine {
       IdempotencyService idempotency,
       FieldTransformer transformer,
       int maxRows) {
+    this(catalog, jdbc, transaction, idempotency, transformer, maxRows, ScriptHooks.NONE);
+  }
+
+  public WriteEngine(
+      TenantCatalog catalog,
+      NamedParameterJdbcTemplate jdbc,
+      TransactionTemplate transaction,
+      IdempotencyService idempotency,
+      FieldTransformer transformer,
+      int maxRows,
+      ScriptHooks scripts) {
+    this.scripts = scripts;
     this.catalog = catalog;
     this.planner = new WritePlanner(catalog);
     this.executor = new WriteExecutor(jdbc);
@@ -82,11 +97,13 @@ public final class WriteEngine {
     String key = idempotencyKey(snapshot, request.idempotencyKey());
     JsonNode body = BodyReader.read(request.body(), bodyLimit(integration));
     validateSchema(integration, body);
+    JsonNode original = body;
+    body = scripts.before(scope, integration, input.values(), body);
     RowData data = materialize(scope, integration, type, body, input);
 
     IdempotencyService.Proceed reservation = null;
     if (key != null) {
-      byte[] hash = requestHash(input, body);
+      byte[] hash = requestHash(input, original);
       var decision = idempotency.begin(scope, integration.integrationId(), key, hash);
       if (decision instanceof IdempotencyService.Replay replay) {
         return new WriteResult(replay.status(), parse(replay.body()), true);
@@ -95,7 +112,7 @@ public final class WriteEngine {
     }
     WriteResult result;
     try {
-      result = run(scope, integration, type, data);
+      result = run(scope, integration, type, data, input.values(), body);
     } catch (RuntimeException e) {
       if (reservation != null) {
         idempotency.release(reservation);
@@ -191,22 +208,41 @@ public final class WriteEngine {
 
   // ---- execução --------------------------------------------------------------------------
 
+  /** Resultado da gravação e a resposta já passada pelo gancho {@code afterExecute}. */
+  private record Done(WriteExecutor.Outcome outcome, JsonNode response) {}
+
+  /**
+   * O {@code afterExecute} roda ainda dentro da transação: se o script recusar a operação, nada é
+   * confirmado.
+   */
   private WriteResult run(
-      TenantScope scope, PublishedIntegration integration, String type, RowData data) {
+      TenantScope scope,
+      PublishedIntegration integration,
+      String type,
+      RowData data,
+      Map<String, String> params,
+      JsonNode body) {
     try {
-      WriteExecutor.Outcome outcome =
+      Done done =
           TenantContext.supplyAs(
               scope,
               () ->
                   transaction.execute(
-                      status ->
-                          switch (type) {
-                            case "INSERT" -> executor.insert(data);
-                            case "UPSERT" -> executor.upsert(data);
-                            case "UPDATE" -> executor.updateOnly(data);
-                            default -> throw new IllegalStateException("Operação não é de escrita");
-                          }));
-      return new WriteResult(statusOf(integration.snapshot(), outcome), outcome.body(), false);
+                      status -> {
+                        WriteExecutor.Outcome outcome =
+                            switch (type) {
+                              case "INSERT" -> executor.insert(data);
+                              case "UPSERT" -> executor.upsert(data);
+                              case "UPDATE" -> executor.updateOnly(data);
+                              default ->
+                                  throw new IllegalStateException("Operação não é de escrita");
+                            };
+                        return new Done(
+                            outcome,
+                            scripts.after(scope, integration, params, body, outcome.body()));
+                      }));
+      return new WriteResult(
+          statusOf(integration.snapshot(), done.outcome()), done.response(), false);
     } catch (TenantUnavailableException e) {
       throw tenantUnavailable(scope, e);
     } catch (TransactionTimedOutException e) {

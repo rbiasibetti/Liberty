@@ -242,7 +242,8 @@ class WriteContractTest {
     client(
         "acme-hml",
         "integration:execute:pedido-criar integration:execute:pedido-idem"
-            + " integration:execute:cliente-upsert integration:execute:cliente-atualizar");
+            + " integration:execute:cliente-upsert integration:execute:cliente-atualizar"
+            + " integration:execute:pedido-script");
     client("acme-leitor", "integration:execute:cliente-upsert");
 
     publish(
@@ -271,6 +272,33 @@ class WriteContractTest {
             "{'type':'INSERT','write':{'root':" + PEDIDO + "}}",
             ",'maxBodyBytes':600",
             ",'idempotency':{'required':true},'response':{'successStatus':200}"));
+    String before =
+        "function beforeExecute(i) { const b = i.body; b.numero = b.numero.toUpperCase();"
+            + " if (b.clienteId === 99) fail(422, `cliente bloqueado`);"
+            + " if (b.numero === `LOOP`) { while (true) {} }"
+            + " if (b.numero === `ERRO`) { throw new Error(`segredo interno`); }"
+            + " return b; }";
+    String after =
+        "function afterExecute(i) { if (i.body.clienteId === 98) fail(409, `regra de negocio`);"
+            + " const q = db.named(`qtd_itens`, { id: i.result.key.id });"
+            + " return Object.assign({}, i.result, { itensGravados: q[0].n, origem: i.params.x }); }";
+    publish(
+        "pedido-script",
+        "POST",
+        "/pedidos-script",
+        snapshot(
+            "pedido-script",
+            "POST",
+            "/pedidos-script",
+            "[]",
+            j(PEDIDO_SCHEMA),
+            "{'type':'INSERT','write':{'root':" + PEDIDO + "}}",
+            "",
+            ",'scripts':{'beforeExecute':\""
+                + before
+                + "\",'afterExecute':\""
+                + after
+                + "\"},'namedQueries':[{'name':'qtd_itens','sql':'SELECT COUNT(*) AS n FROM dbo.tb_item WHERE pedido_id = :id','params':['id']}]"));
     String cliente =
         "{'table':'dbo.tb_cliente','keyColumns':['codigo'],'fields':[{'column':'codigo','param':'codigo'},"
             + "{'column':'nome','source':'/nome'},{'column':'email','source':'/email'}]}";
@@ -536,5 +564,48 @@ class WriteContractTest {
     assertThat(
             count("dbo.tb_cliente WHERE codigo = 'C-9' AND nome = N'Ana Maria' AND email IS NULL"))
         .isEqualTo(1);
+  }
+
+  // ---------- scripts ----------
+
+  private MockHttpServletResponse postScript(String body) throws Exception {
+    return send(post("/acme/api/pedidos-script"), body, null);
+  }
+
+  @Test
+  void scriptsEnrichTheBodyAndTheResponseInsideTheTransaction() throws Exception {
+    MockHttpServletResponse response = postScript(pedido("script-ok", ITENS_OK));
+
+    assertThat(response.getStatus()).as(response.getContentAsString()).isEqualTo(201);
+    assertThat(json(response)).containsEntry("itensGravados", 2L);
+    assertThat(count("dbo.tb_pedido WHERE numero = 'SCRIPT-OK'")).isEqualTo(1);
+  }
+
+  @Test
+  void aScriptRefusalBeforeOrAfterTheWriteLeavesNothingBehind() throws Exception {
+    long pedidos = count("dbo.tb_pedido");
+    MockHttpServletResponse before =
+        postScript(pedido("blk", ITENS_OK).replace("'clienteId':7", "'clienteId':99"));
+    MockHttpServletResponse after =
+        postScript(pedido("rollback", ITENS_OK).replace("'clienteId':7", "'clienteId':98"));
+
+    assertThat(before.getStatus()).isEqualTo(422);
+    assertThat(json(before)).containsEntry("type", "urn:liberty:problem:script-rejected");
+    assertThat(before.getContentAsString()).contains("cliente bloqueado");
+    assertThat(after.getStatus()).isEqualTo(409);
+    assertThat(count("dbo.tb_pedido")).isEqualTo(pedidos);
+  }
+
+  @Test
+  void runawayAndFailingScriptsAreContainedWithoutLeakingDetails() throws Exception {
+    MockHttpServletResponse loop = postScript(pedido("loop", ITENS_OK));
+    MockHttpServletResponse broken = postScript(pedido("erro", ITENS_OK));
+    MockHttpServletResponse healthy = postScript(pedido("depois", ITENS_OK));
+
+    assertThat(loop.getStatus()).isEqualTo(504);
+    assertThat(json(loop)).containsEntry("type", "urn:liberty:problem:script-timeout");
+    assertThat(broken.getStatus()).isEqualTo(500);
+    assertThat(broken.getContentAsString()).doesNotContain("segredo interno");
+    assertThat(healthy.getStatus()).isEqualTo(201);
   }
 }

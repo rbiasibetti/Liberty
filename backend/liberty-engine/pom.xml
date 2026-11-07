@@ -23,6 +23,10 @@
     </dependency>
     <dependency>
       <groupId>br.com.liberty</groupId>
+      <artifactId>liberty-scripts</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>br.com.liberty</groupId>
       <artifactId>liberty-infrastructure</artifactId>
     </dependency>
 

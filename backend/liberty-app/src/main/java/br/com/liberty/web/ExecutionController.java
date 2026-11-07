@@ -8,6 +8,7 @@ import br.com.liberty.engine.read.ReadResult;
 import br.com.liberty.engine.route.PublishedRoutes;
 import br.com.liberty.engine.route.RouteMatch;
 import br.com.liberty.engine.route.RouteTable;
+import br.com.liberty.engine.script.ScriptHooks;
 import br.com.liberty.engine.write.WriteEngine;
 import br.com.liberty.engine.write.WriteRequest;
 import br.com.liberty.engine.write.WriteResult;
@@ -39,13 +40,18 @@ import org.springframework.web.util.UriUtils;
 @RestController
 class ExecutionController {
 
+  private static final tools.jackson.databind.json.JsonMapper JSON =
+      tools.jackson.databind.json.JsonMapper.builder().build();
   private static final String SCOPE_PREFIX = "SCOPE_integration:execute:";
 
   private final PublishedRoutes routes;
   private final ReadEngine reads;
   private final WriteEngine writes;
+  private final ScriptHooks scripts;
 
-  ExecutionController(PublishedRoutes routes, ReadEngine reads, WriteEngine writes) {
+  ExecutionController(
+      PublishedRoutes routes, ReadEngine reads, WriteEngine writes, ScriptHooks scripts) {
+    this.scripts = scripts;
     this.routes = routes;
     this.reads = reads;
     this.writes = writes;
@@ -73,10 +79,33 @@ class ExecutionController {
     }
     ReadResult result =
         reads.execute(scope, match.integration(), match.pathVariables(), queryOf(request));
+    Object body = result.body();
+    var afterExecute = match.integration().snapshot().scripts().afterExecute();
+    if (afterExecute != null && !afterExecute.isBlank()) {
+      body =
+          scripts.after(
+              scope,
+              match.integration(),
+              scriptParams(match, request),
+              null,
+              JSON.valueToTree(body));
+    }
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
         .contentType(MediaType.APPLICATION_JSON)
-        .body(result.body());
+        .body(body);
+  }
+
+  /** Parâmetros declarados pela integração (caminho e query) como o script os recebe. */
+  private static Map<String, String> scriptParams(RouteMatch match, HttpServletRequest request) {
+    Map<String, String> params = new LinkedHashMap<>(match.pathVariables());
+    for (var declared : match.integration().snapshot().request().params()) {
+      String value = request.getParameter(declared.name());
+      if ("query".equals(declared.in()) && value != null) {
+        params.put(declared.name(), value);
+      }
+    }
+    return params;
   }
 
   private ResponseEntity<Object> write(

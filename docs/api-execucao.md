@@ -37,6 +37,10 @@ GET /acme/api/pedidos?cliente=2&periodo=2026-01-05,2026-01-07&sort=-vl_total&lim
 - **Idempotência:** envie `Idempotency-Key` (1 a 200 caracteres ASCII visíveis; obrigatório nas integrações que o exigem). Repetir a chave com o mesmo conteúdo devolve a resposta original, com `Idempotent-Replayed: true`, sem gravar de novo (por 24 h). Chave igual com conteúdo diferente é 409; chave ainda em andamento é 409 com `Retry-After`. Se a gravação falhar, a chave é liberada.
 - **Resposta:** INSERT devolve 201 com `key` (chave primária gerada) e `rows` (linhas por tabela); UPSERT, 201 ou 200 com `result` (`inserted` ou `updated`) e `key`; UPDATE, 200 com `updated` e `key`, ou 404 se a chave não existe. Os campos podem normalizar o valor com funções (`trim`, `upper`, `lower`, `digits`, `substring`, `replace`, `toDate`, `toDecimal`, `default`, `map`); valor que não converte volta como violação do campo. Campos ausentes no corpo não alteram a coluna em UPDATE e UPSERT; `null` grava NULL.
 
+## Scripts
+
+Integrações podem ter scripts JavaScript que ajustam o corpo antes da gravação (`beforeExecute`) e a resposta (`afterExecute`), e recusar a operação com um status 4xx. Para o consumidor, isso aparece como: `script-rejected` (o status e a mensagem escolhidos pela integração; em escrita, nada é gravado), `script-timeout` (504), `script-error` (500) ou `script-unavailable` (503, tente de novo).
+
 ## Erros
 
 Sempre `application/problem+json`, com o mesmo identificador no corpo (`requestId`) e no cabeçalho `X-Request-Id` (você pode enviar o seu: 8 a 64 caracteres entre letras, números, `.`, `_` e `-`).
@@ -61,7 +65,8 @@ Sempre `application/problem+json`, com o mesmo identificador no corpo (`requestI
 | 405 | A rota existe para outro método; o cabeçalho `Allow` lista os aceitos |
 | 409 | Registro único ambíguo, chave duplicada, restrição violada, ou conflito de idempotência |
 | 413 | Corpo ou número de linhas acima do limite |
+| 429 | Scripts demais em execução (`Retry-After`) |
 | 415 | Escrita com corpo que não é `application/json` |
 | 422 | Algum valor não é aceito pelo banco do cliente |
 | 503 | Banco do cliente indisponível, schema alterado ou conflito de concorrência; tente de novo (`Retry-After` quando houver) |
-| 504 | A consulta passou do prazo de 30 s |
+| 504 | A consulta (30 s) ou o script (2 s) passou do prazo |

@@ -27,6 +27,7 @@
     <module>liberty-domain</module>
     <module>liberty-core-migrations</module>
     <module>liberty-snapshot</module>
+    <module>liberty-scripts</module>
     <module>liberty-infrastructure</module>
     <module>liberty-engine</module>
     <module>liberty-app</module>
@@ -63,6 +64,11 @@
       <dependency>
         <groupId>br.com.liberty</groupId>
         <artifactId>liberty-snapshot</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>br.com.liberty</groupId>
+        <artifactId>liberty-scripts</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

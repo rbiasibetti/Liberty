@@ -106,7 +106,7 @@ Nenhum segredo vai para o Git, e os princípios abaixo são obrigatórios no pro
 - Cada endpoint exige autorização explícita (`@PreAuthorize`), verificada por teste de arquitetura; CORS por lista de permissão.
 - Segredos só em cofre; nenhum dado pessoal em log; mensagens de erro nunca repetem valores recebidos.
 - SQL com identificadores validados contra o catálogo e valores sempre parametrizados; corpo de requisição com limites rígidos (tamanho, profundidade, itens por lista, chaves duplicadas).
-- Scripts de integradores (em desenvolvimento) rodam em processos isolados, sem acesso a classes Java, arquivos ou rede.
+- Scripts de integradores rodam em processos isolados, com memória e prazo limitados, sem acesso a classes Java, arquivos ou rede.
 
 Para reportar uma vulnerabilidade, veja [SECURITY.md](SECURITY.md).
 
@@ -206,8 +206,7 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Catálogo do tenant, modelo do snapshot e validação
 - [x] Motor de leitura e roteamento
 - [x] Motor de escrita (master-detail transacional, UPSERT, UPDATE) e idempotência
-- [ ] Funções de transformação de campos
-- [ ] Motor de scripts JavaScript isolados
+- [x] Funções de transformação de campos e motor de scripts JavaScript isolados
 - [ ] Ciclo de vida das integrações (rascunho, revisão, publicação, reversão)
 - [ ] Auditoria, observabilidade e proteção de tráfego (limites de taxa)
 - [ ] Interface web de administração e testes de ponta a ponta

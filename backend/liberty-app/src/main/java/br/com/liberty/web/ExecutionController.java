@@ -8,9 +8,14 @@ import br.com.liberty.engine.read.ReadResult;
 import br.com.liberty.engine.route.PublishedRoutes;
 import br.com.liberty.engine.route.RouteMatch;
 import br.com.liberty.engine.route.RouteTable;
+import br.com.liberty.engine.write.WriteEngine;
+import br.com.liberty.engine.write.WriteRequest;
+import br.com.liberty.engine.write.WriteResult;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,10 +43,12 @@ class ExecutionController {
 
   private final PublishedRoutes routes;
   private final ReadEngine reads;
+  private final WriteEngine writes;
 
-  ExecutionController(PublishedRoutes routes, ReadEngine reads) {
+  ExecutionController(PublishedRoutes routes, ReadEngine reads, WriteEngine writes) {
     this.routes = routes;
     this.reads = reads;
+    this.writes = writes;
   }
 
   @RequestMapping("/{slug}/api/**")
@@ -62,8 +69,7 @@ class ExecutionController {
           403, "missing-scope", "Acesso negado", "O token não tem o escopo desta integração");
     }
     if (!"SELECT".equals(match.integration().snapshot().operation().type())) {
-      throw new ProblemException(
-          501, "not-implemented", "Não implementado", "Esta operação ainda não está disponível");
+      return write(request, scope, match);
     }
     ReadResult result =
         reads.execute(scope, match.integration(), match.pathVariables(), queryOf(request));
@@ -71,6 +77,68 @@ class ExecutionController {
         .cacheControl(CacheControl.noStore())
         .contentType(MediaType.APPLICATION_JSON)
         .body(result.body());
+  }
+
+  private ResponseEntity<Object> write(
+      HttpServletRequest request, TenantScope scope, RouteMatch match) {
+    int limit = WriteEngine.bodyLimit(match.integration());
+    byte[] body = readBody(request, limit);
+    WriteResult result =
+        writes.execute(
+            scope,
+            match.integration(),
+            new WriteRequest(
+                body, match.pathVariables(), queryOf(request), idempotencyKey(request)));
+    ResponseEntity.BodyBuilder response =
+        ResponseEntity.status(result.status())
+            .cacheControl(CacheControl.noStore())
+            .contentType(MediaType.APPLICATION_JSON);
+    if (result.replayed()) {
+      response.header("Idempotent-Replayed", "true");
+    }
+    return response.body(result.body());
+  }
+
+  /** O corpo só é lido se for JSON e couber no limite; nada além do limite entra em memória. */
+  private static byte[] readBody(HttpServletRequest request, int limit) {
+    String contentType = request.getContentType();
+    if (contentType == null
+        || !MediaType.APPLICATION_JSON.isCompatibleWith(MediaType.parseMediaType(contentType))) {
+      throw new ProblemException(
+          415,
+          "unsupported-media-type",
+          "Tipo de conteúdo não suportado",
+          "Envie o corpo como application/json");
+    }
+    if (request.getContentLengthLong() > limit) {
+      throw payloadTooLarge();
+    }
+    try {
+      byte[] body = request.getInputStream().readNBytes(limit + 1);
+      if (body.length > limit) {
+        throw payloadTooLarge();
+      }
+      return body;
+    } catch (IOException e) {
+      throw new ProblemException(
+          400, "unreadable-body", "Corpo ilegível", "Não foi possível ler o corpo da requisição");
+    }
+  }
+
+  private static ProblemException payloadTooLarge() {
+    return new ProblemException(
+        413, "payload-too-large", "Corpo grande demais", "O corpo excede o tamanho permitido");
+  }
+
+  private static String idempotencyKey(HttpServletRequest request) {
+    List<String> values = Collections.list(request.getHeaders("Idempotency-Key"));
+    if (values.size() > 1) {
+      throw ProblemException.validation(
+          List.of(
+              new ProblemException.Violation(
+                  "Idempotency-Key", "repeated_parameter", "Informe o cabeçalho uma única vez")));
+    }
+    return values.isEmpty() ? null : values.getFirst();
   }
 
   private static ProblemException routeProblem(RouteTable.Resolution resolution) {

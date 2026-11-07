@@ -11,5 +11,7 @@ public interface IdempotencyRepository
 
   IdempotencyEntity save(IdempotencyEntity entry);
 
+  void deleteById(IdempotencyEntity.Key key);
+
   long deleteByExpiresAtBefore(Instant limit);
 }

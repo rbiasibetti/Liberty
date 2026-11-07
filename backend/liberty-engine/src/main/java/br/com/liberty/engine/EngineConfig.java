@@ -3,7 +3,13 @@ package br.com.liberty.engine;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.route.PublicationSource;
 import br.com.liberty.engine.route.PublishedRoutes;
+import br.com.liberty.engine.write.FieldTransformer;
+import br.com.liberty.engine.write.IdempotencyService;
+import br.com.liberty.engine.write.JpaIdempotencyService;
+import br.com.liberty.engine.write.WriteEngine;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
+import br.com.liberty.infrastructure.persistence.IdempotencyRepository;
+import br.com.liberty.infrastructure.persistence.TenantRepository;
 import br.com.liberty.snapshot.SnapshotService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -14,6 +20,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration(proxyBeanMethods = false)
+@org.springframework.scheduling.annotation.EnableScheduling
 @EnableConfigurationProperties(LibertyEngineProperties.class)
 public class EngineConfig {
 
@@ -38,5 +45,40 @@ public class EngineConfig {
     readOnly.setReadOnly(true);
     readOnly.setTimeout((int) properties.queryTimeout().toSeconds());
     return new ReadEngine(catalog, jdbc, readOnly);
+  }
+
+  @Bean
+  @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+  FieldTransformer fieldTransformer() {
+    return FieldTransformer.NONE;
+  }
+
+  /** Reservas de idempotência vivem no core: transação do core, não a do tenant. */
+  @Bean
+  IdempotencyService idempotencyService(
+      IdempotencyRepository repository,
+      TenantRepository tenants,
+      @Qualifier("transactionManager") PlatformTransactionManager coreTransactionManager,
+      LibertyEngineProperties properties) {
+    return new JpaIdempotencyService(
+        repository,
+        tenants,
+        new TransactionTemplate(coreTransactionManager),
+        properties.idempotencyTtl());
+  }
+
+  /** Uma escrita é uma única transação no banco do tenant, com prazo total. */
+  @Bean
+  WriteEngine writeEngine(
+      TenantCatalog catalog,
+      @Qualifier("tenantJdbcTemplate") NamedParameterJdbcTemplate jdbc,
+      @Qualifier("tenantTransactionManager") PlatformTransactionManager transactionManager,
+      IdempotencyService idempotency,
+      FieldTransformer transformer,
+      LibertyEngineProperties properties) {
+    TransactionTemplate writes = new TransactionTemplate(transactionManager);
+    writes.setTimeout((int) properties.writeTimeout().toSeconds());
+    return new WriteEngine(
+        catalog, jdbc, writes, idempotency, transformer, properties.maxWriteRows());
   }
 }

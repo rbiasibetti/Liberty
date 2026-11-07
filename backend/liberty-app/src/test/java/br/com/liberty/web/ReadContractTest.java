@@ -636,14 +636,14 @@ class ReadContractTest {
   }
 
   @Test
-  void writesAreNotImplementedYet() throws Exception {
+  void writeIntegrationsOnlyAcceptJsonBodies() throws Exception {
     MockHttpServletResponse response =
         call(
-            post("/acme/api/pedidos").contentType(MediaType.APPLICATION_JSON).content("{}"),
+            post("/acme/api/pedidos").contentType(MediaType.TEXT_PLAIN).content("{}"),
             token("acme-hml"));
 
-    assertThat(response.getStatus()).isEqualTo(501);
-    assertThat(json(response)).containsEntry("type", "urn:liberty:problem:not-implemented");
+    assertThat(response.getStatus()).isEqualTo(415);
+    assertThat(json(response)).containsEntry("type", "urn:liberty:problem:unsupported-media-type");
   }
 
   // ---------- autorização, ambientes e tenants ----------

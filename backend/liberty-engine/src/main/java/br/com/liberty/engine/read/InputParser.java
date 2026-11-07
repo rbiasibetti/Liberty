@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * repetidos, ausentes ou do tipo errado, e os limites de página. Tudo que é recusado vira uma lista
  * de violações, uma por parâmetro. O valor recebido nunca é repetido nas mensagens.
  */
-final class InputParser {
+public final class InputParser {
 
   static final int DEFAULT_LIMIT = 100;
   static final int MAX_LIMIT = 1000;
@@ -31,14 +31,17 @@ final class InputParser {
 
   private InputParser() {}
 
-  static ParsedInput parse(
+  public static ParsedInput parse(
       Snapshot snapshot, Map<String, String> pathVariables, Map<String, List<String>> query) {
     Select select = snapshot.operation().select();
     List<Violation> violations = new ArrayList<>();
     Map<String, Param> declared = new HashMap<>();
     snapshot.request().params().forEach(p -> declared.put(p.name(), p));
 
-    Set<String> allowed = new HashSet<>(List.of("limit", "offset", "sort"));
+    Set<String> allowed = new HashSet<>();
+    if (select != null) {
+      allowed.addAll(List.of("limit", "offset", "sort"));
+    }
     declared.values().stream()
         .filter(p -> "query".equals(p.in()))
         .forEach(p -> allowed.add(p.name()));
@@ -70,6 +73,12 @@ final class InputParser {
           .ifPresentOrElse(violations::add, () -> values.put(param.name(), raw));
     }
 
+    if (select == null) {
+      if (!violations.isEmpty()) {
+        throw ProblemException.validation(violations);
+      }
+      return new ParsedInput(values, 0, 0, null);
+    }
     int limit = intParam(query, "limit", defaultLimit(select), 1, maxLimit(select), violations);
     int offset = intParam(query, "offset", 0, 0, MAX_OFFSET, violations);
     String sort = first(query.get("sort"));

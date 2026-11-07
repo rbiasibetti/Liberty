@@ -47,8 +47,13 @@ public final class SchemaValidator {
   }
 
   public List<FieldError> validate(JsonNode document) {
+    return toFieldErrors(schema.validate(document));
+  }
+
+  /** Erros de qualquer JSON Schema (ex.: o do corpo de uma integração) como erros por campo. */
+  public static List<FieldError> toFieldErrors(List<Error> found) {
     List<FieldError> errors = new ArrayList<>();
-    for (Error error : schema.validate(document)) {
+    for (Error error : found) {
       String keyword = error.getKeyword();
       String path = pointer(error.getInstanceLocation().toString());
       if (("required".equals(keyword) || "additionalProperties".equals(keyword))
@@ -58,6 +63,12 @@ public final class SchemaValidator {
       errors.add(new FieldError(path, keyword, MESSAGES.getOrDefault(keyword, "Valor inválido")));
     }
     return errors;
+  }
+
+  /** Compila o JSON Schema do corpo de uma integração (já conferido na publicação). */
+  public static Schema compile(JsonNode schemaNode) {
+    return SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
+        .getSchema(schemaNode);
   }
 
   /**

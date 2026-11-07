@@ -11,4 +11,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("liberty.engine")
 public record LibertyEngineProperties(
     @DefaultValue("5s") Duration routesRefreshInterval,
-    @DefaultValue("30s") Duration queryTimeout) {}
+    @DefaultValue("30s") Duration queryTimeout,
+    @DefaultValue("60s") Duration writeTimeout,
+    @DefaultValue("50000") int maxWriteRows,
+    @DefaultValue("24h") Duration idempotencyTtl) {}

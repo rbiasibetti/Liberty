@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -15,13 +16,13 @@ import java.util.UUID;
  * tipado (nunca como texto para o banco converter, o que perderia índices e abriria espaço a
  * surpresas).
  */
-final class ValueBinder {
+public final class ValueBinder {
 
   /** O texto não é um valor válido para a coluna. */
-  static final class InvalidValueException extends RuntimeException {
+  public static final class InvalidValueException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
-    InvalidValueException(String message) {
+    public InvalidValueException(String message) {
       super(message);
     }
   }
@@ -30,7 +31,7 @@ final class ValueBinder {
    * O tipo da coluna não suporta o uso pedido (ex.: comparar XML); é erro de configuração da
    * integração.
    */
-  static final class UnsupportedColumnException extends RuntimeException {
+  public static final class UnsupportedColumnException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     UnsupportedColumnException(String message) {
@@ -40,7 +41,7 @@ final class ValueBinder {
 
   private ValueBinder() {}
 
-  static Object bind(ColumnInfo column, String raw) {
+  public static Object bind(ColumnInfo column, String raw) {
     return bind(column, raw, false);
   }
 
@@ -49,7 +50,7 @@ final class ValueBinder {
    * data e hora vale o último instante do dia (limite superior inclusivo: "até 2026-01-07" inclui o
    * dia 7 inteiro).
    */
-  static Object bind(ColumnInfo column, String raw, boolean endOfDay) {
+  public static Object bind(ColumnInfo column, String raw, boolean endOfDay) {
     try {
       return switch (column.kind()) {
         case STRING -> raw;
@@ -67,6 +68,28 @@ final class ValueBinder {
                 "Tipo de coluna sem suporte a filtro: " + column.typeName());
       };
     } catch (DateTimeParseException | IllegalArgumentException e) {
+      throw new InvalidValueException(
+          "Valor inválido para o tipo " + column.kind().name().toLowerCase(java.util.Locale.ROOT));
+    }
+  }
+
+  /**
+   * Como {@link #bind(ColumnInfo, String)} para valores que serão gravados: binários chegam em
+   * Base64, XML e UUID vão como texto (o banco converte), e o que não tem representação segura
+   * continua recusado.
+   */
+  public static Object bindForWrite(ColumnInfo column, String raw) {
+    try {
+      return switch (column.kind()) {
+        case BINARY -> Base64.getDecoder().decode(raw);
+        case XML -> raw;
+        case UUID -> UUID.fromString(raw).toString();
+        case OTHER ->
+            throw new UnsupportedColumnException(
+                "Tipo de coluna sem suporte a escrita: " + column.typeName());
+        default -> bind(column, raw, false);
+      };
+    } catch (IllegalArgumentException e) {
       throw new InvalidValueException(
           "Valor inválido para o tipo " + column.kind().name().toLowerCase(java.util.Locale.ROOT));
     }

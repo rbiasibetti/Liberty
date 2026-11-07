@@ -126,7 +126,7 @@ Para reportar uma vulnerabilidade, veja [SECURITY.md](SECURITY.md).
 ### Pré-requisitos
 
 - JDK 25 (o wrapper baixa o Maven 3.9)
-- Node.js 20.19 ou superior (22 LTS recomendado) e npm
+- Node.js 26 LTS (mínimo: 22.22, 24.15 ou 26) e npm
 - Docker Compose ou Podman (para o ambiente local completo)
 - SQL Server acessível para os testes de banco (ou Docker, via Testcontainers)
 

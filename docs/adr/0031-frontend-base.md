@@ -10,7 +10,7 @@ A interface de administração precisa de login com o provedor OIDC, troca entre
 
 ## Decisão
 
-**Pilha.** React 19, TypeScript estrito, Vite, Mantine (componentes e notificações), React Router 7. As versões são fixas. O React Router 8 e o jsdom 30 exigem Node 22.22 ou superior; o projeto mantém o mínimo de Node 20.19 (README), então ficam no Router 7 e no jsdom 29 até o mínimo subir (o Node 20 já saiu de suporte; subir para o Node 22 LTS é recomendado e deve ser decidido com o ambiente de quem desenvolve).
+**Pilha.** React 19, TypeScript estrito, Vite, Mantine (componentes e notificações), React Router 7. As versões são fixas. O mínimo do projeto é Node 22.22, 24.15 ou 26 (o Node 20 saiu de suporte; o 26 é a LTS atual e é o usado no CI e na imagem), o que permite React Router 8, jsdom 31 e vitest 5. O TypeScript fica na 5.9 porque o `openapi-typescript` 7 ainda declara `typescript ^5` como par (o `typescript-eslint` aceita até a 6.0); o 7 só virá quando os dois o suportarem.
 
 **Login (OIDC com PKCE).** `oidc-client-ts` com código de autorização, cliente público sem segredo (PKCE S256, o padrão da biblioteca), escopo `openid profile`, retorno em `/callback` e saída com redirecionamento ao provedor. A sessão fica no `sessionStorage` (some ao fechar a aba) e é renovada com refresh token; guardar em memória seria mais restritivo, mas perderia a sessão a cada recarga. O CSP de produção (nginx) bloqueia scripts de terceiros, o que reduz o risco de um XSS ler o armazenamento. O destino depois do login só aceita caminhos internos (nunca URL externa).
 

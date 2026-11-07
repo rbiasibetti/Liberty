@@ -159,8 +159,12 @@ class TrafficGuardTest {
     try (var one = new Bucket4jRateLimiter(uri, "liberty:test:", meters);
         var two = new Bucket4jRateLimiter(uri, "liberty:test:", meters)) {
       for (int i = 0; i < 8; i++) {
-        if (one.tryAcquire(tenant, limits).allowed()) allowed.incrementAndGet();
-        if (two.tryAcquire(tenant, limits).allowed()) allowed.incrementAndGet();
+        if (one.tryAcquire(tenant, limits).allowed()) {
+          allowed.incrementAndGet();
+        }
+        if (two.tryAcquire(tenant, limits).allowed()) {
+          allowed.incrementAndGet();
+        }
       }
     }
     assertThat(allowed.get()).as("duas instâncias dividem um só balde de 10").isBetween(10, 11);

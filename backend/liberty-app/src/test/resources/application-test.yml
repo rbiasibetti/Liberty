@@ -1,4 +1,9 @@
 liberty:
+  limits:
+    # os testes disparam rajadas (fuzzing); o limite do plano é exercitado no NoisyNeighborTest
+    rate-per-second: 100000
+    burst: 100000
+    max-concurrent: 1000
   metrics:
     password: teste-metricas
   vault:

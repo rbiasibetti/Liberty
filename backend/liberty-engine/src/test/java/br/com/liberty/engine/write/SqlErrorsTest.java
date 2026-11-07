@@ -61,6 +61,13 @@ class SqlErrorsTest {
   }
 
   @Test
+  void onlyDeadlocksAreRetryable() {
+    assertThat(SqlErrors.isDeadlock(new RuntimeException("x", sql(1205)))).isTrue();
+    assertThat(SqlErrors.isDeadlock(sql(2627))).isFalse();
+    assertThat(SqlErrors.isDeadlock(new IllegalStateException())).isFalse();
+  }
+
+  @Test
   void unknownErrorsAreLeftToTheCaller() {
     assertThat(SqlErrors.translate(sql(9999))).isEmpty();
     assertThat(SqlErrors.translate(new IllegalStateException("sem sql"))).isEmpty();

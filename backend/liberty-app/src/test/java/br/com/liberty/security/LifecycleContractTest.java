@@ -382,4 +382,59 @@ class LifecycleContractTest {
         .isEqualTo(400);
     assertThat(doc.getContentAsString()).contains("/acme/api/doc").contains("oauth2");
   }
+
+  @Test
+  void sandboxRunsUnpublishedVersionsInHmlAndRollsEverythingBack() throws Exception {
+    submitted("sbx-lista", "/sbx-lista", "dbo.tb_cliente");
+    call(
+        post("/api/v1/tenants/acme/integrations"),
+        "ana",
+        "{\"key\":\"sbx-cria\",\"name\":\"x\",\"method\":\"POST\",\"route\":\"/sbx-cria\"}");
+    String insert =
+        "{\"schemaVersion\":1,\"integration\":{\"key\":\"sbx-cria\",\"name\":\"x\",\"method\":\"POST\",\"route\":\"/sbx-cria\"},"
+            + "\"request\":{\"params\":[],\"bodySchema\":{\"type\":\"object\"}},\"operation\":{\"type\":\"INSERT\",\"write\":{\"root\":{\"table\":\"dbo.tb_cliente\","
+            + "\"fields\":[{\"column\":\"codigo\",\"source\":\"/codigo\"},{\"column\":\"nome\",\"source\":\"/nome\"}]}}}}";
+    call(put(base("sbx-cria") + "/draft"), "ana", insert);
+
+    var read = call(post(base("sbx-lista") + "/versions/1/sandbox"), "ana", "{}");
+    var write =
+        call(
+            post(base("sbx-cria") + "/versions/1/sandbox"),
+            "ana",
+            "{\"body\":{\"codigo\":\"Z9\",\"nome\":\"Zé\"}}");
+    var duplicate =
+        call(
+            post(base("sbx-cria") + "/versions/1/sandbox"),
+            "ana",
+            "{\"body\":{\"codigo\":\"C1\",\"nome\":\"Dup\"}}");
+    var invalid = call(post(base("sbx-cria") + "/versions/1/sandbox"), "ana", "{\"body\":[1]}");
+
+    assertThat(read.getStatus()).isEqualTo(200);
+    assertThat(json(read)).containsEntry("succeeded", true).containsEntry("rolledBack", true);
+    assertThat(read.getContentAsString()).contains("SELECT");
+    assertThat(write.getStatus()).as(write.getContentAsString()).isEqualTo(200);
+    assertThat(json(write)).containsEntry("status", 201L).containsEntry("succeeded", true);
+    assertThat(write.getContentAsString())
+        .contains("INSERT INTO [dbo].[tb_cliente]")
+        .doesNotContain("Z9");
+    assertThat(json(duplicate)).containsEntry("succeeded", false).containsEntry("status", 409L);
+    assertThat(json(invalid)).containsEntry("succeeded", false).containsEntry("status", 400L);
+    try (Connection c =
+            DriverManager.getConnection(TENANT_DB.url(), TENANT_DB.user(), TENANT_DB.password());
+        Statement st = c.createStatement();
+        var rs = st.executeQuery("SELECT COUNT(*) FROM dbo.tb_cliente WHERE codigo = 'Z9'")) {
+      rs.next();
+      assertThat(rs.getInt(1)).isZero();
+    }
+  }
+
+  @Test
+  void sandboxNeedsTheIntegratorRoleAndAnExistingVersion() throws Exception {
+    assertThat(call(post(base("sbx-lista") + "/versions/1/sandbox"), "dan", "{}").getStatus())
+        .isEqualTo(403);
+    assertThat(call(post(base("nao-existe") + "/versions/1/sandbox"), "ana", "{}").getStatus())
+        .isEqualTo(404);
+    assertThat(call(post(base("papeis") + "/versions/9/sandbox"), "ana", "{}").getStatus())
+        .isEqualTo(404);
+  }
 }

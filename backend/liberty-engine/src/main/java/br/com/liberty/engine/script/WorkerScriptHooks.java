@@ -134,6 +134,7 @@ public final class WorkerScriptHooks implements ScriptHooks {
 
   private JsonNode translate(
       PublishedIntegration integration, String function, ScriptExecutor.Outcome outcome) {
+    ScriptLogs.append(outcome.logs());
     if (!outcome.logs().isEmpty()) {
       LOG.debug("Console do script {} ({}): {}", integration.key(), function, outcome.logs());
     }

@@ -13,6 +13,16 @@ final class SqlErrors {
 
   private SqlErrors() {}
 
+  /** Deadlock escolhido como vítima (1205): a transação foi desfeita e pode ser repetida. */
+  static boolean isDeadlock(Throwable error) {
+    for (int code : codes(error)) {
+      if (code == 1205) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   static Optional<ProblemException> translate(Throwable error) {
     for (int code : codes(error)) {
       switch (code) {

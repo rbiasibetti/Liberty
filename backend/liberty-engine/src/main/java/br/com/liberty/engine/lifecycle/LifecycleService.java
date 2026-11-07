@@ -159,6 +159,18 @@ public class LifecycleService {
     return version(tenant, integration(tenant, key), versionNo).getSnapshot();
   }
 
+  /** Onde está uma versão (qualquer estado) e seu snapshot, para execuções de teste. */
+  public record Target(long integrationId, long versionId, int versionNo, String snapshot) {}
+
+  @Transactional(readOnly = true)
+  public Target target(String slug, String key, int versionNo) {
+    TenantEntity tenant = tenant(slug);
+    IntegrationEntity integration = integration(tenant, key);
+    IntegrationVersionEntity version = version(tenant, integration, versionNo);
+    return new Target(
+        integration.getId(), version.getId(), version.getVersionNo(), version.getSnapshot());
+  }
+
   // ---- rascunho e revisão ----------------------------------------------------------------
 
   /** Cria a versão rascunho ou substitui o rascunho existente; devolve a versão. */

@@ -1,6 +1,7 @@
 package br.com.liberty.engine.write;
 
 import br.com.liberty.engine.problem.ProblemException;
+import br.com.liberty.engine.trace.SqlTrace;
 import br.com.liberty.infrastructure.catalog.ColumnInfo;
 import br.com.liberty.infrastructure.catalog.SqlIdentifiers;
 import java.math.BigDecimal;
@@ -31,9 +32,29 @@ final class WriteExecutor {
   record Outcome(boolean created, ObjectNode body) {}
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final SqlTrace trace;
 
   WriteExecutor(NamedParameterJdbcTemplate jdbc) {
+    this(jdbc, null);
+  }
+
+  /** Com {@code trace}, cada comando é registrado (usado só no sandbox). */
+  WriteExecutor(NamedParameterJdbcTemplate jdbc, SqlTrace trace) {
     this.jdbc = jdbc;
+    this.trace = trace;
+  }
+
+  private int update(String sql, MapSqlParameterSource params) {
+    long start = System.nanoTime();
+    int rows = jdbc.update(sql, params);
+    note(sql, rows, start);
+    return rows;
+  }
+
+  private void note(String sql, int rows, long startNanos) {
+    if (trace != null) {
+      trace.record(sql, rows, (System.nanoTime() - startNanos) / 1_000_000);
+    }
   }
 
   Outcome insert(RowData root) {
@@ -81,16 +102,15 @@ final class WriteExecutor {
     MapSqlParameterSource params = params(cells);
     Object key = null;
     if (capture) {
-      key =
-          jdbc.query(
-              insertSql(plan, cells, true),
-              params,
-              rs -> rs.next() ? readKey(rs, plan.primaryKey()) : null);
+      String statement = insertSql(plan, cells, true);
+      long start = System.nanoTime();
+      key = jdbc.query(statement, params, rs -> rs.next() ? readKey(rs, plan.primaryKey()) : null);
+      note(statement, key == null ? 0 : 1, start);
       if (key == null) {
         throw new IllegalStateException("O banco não devolveu a chave inserida");
       }
     } else {
-      jdbc.update(insertSql(plan, cells, false), params);
+      update(insertSql(plan, cells, false), params);
     }
     counts.merge(plan.table().name(), 1, Integer::sum);
     for (int i = 0; i < plan.children().size(); i++) {
@@ -133,7 +153,9 @@ final class WriteExecutor {
 
   private void flush(String sql, List<SqlParameterSource> chunk) {
     if (!chunk.isEmpty()) {
+      long start = System.nanoTime();
       jdbc.batchUpdate(sql, chunk.toArray(SqlParameterSource[]::new));
+      note(sql, chunk.size(), start);
     }
   }
 
@@ -228,7 +250,7 @@ final class WriteExecutor {
           .append(i);
       bind(params, "k" + i, keys.get(i));
     }
-    int updated = jdbc.update(sql.toString(), params);
+    int updated = update(sql.toString(), params);
     if (updated > 1) {
       throw new ProblemException(
           409,

@@ -8,6 +8,7 @@ import br.com.liberty.engine.read.InputParser;
 import br.com.liberty.engine.read.ParsedInput;
 import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.engine.script.ScriptHooks;
+import br.com.liberty.engine.trace.SqlTrace;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
 import br.com.liberty.infrastructure.catalog.UnknownDatabaseObjectException;
 import br.com.liberty.infrastructure.tenancy.TenantUnavailableException;
@@ -48,6 +49,7 @@ public final class WriteEngine {
   private final TenantCatalog catalog;
   private final WritePlanner planner;
   private final WriteExecutor executor;
+  private final NamedParameterJdbcTemplate jdbc;
   private final Materializer materializer;
   private final TransactionTemplate transaction;
   private final IdempotencyService idempotency;
@@ -76,6 +78,7 @@ public final class WriteEngine {
     this.catalog = catalog;
     this.planner = new WritePlanner(catalog);
     this.executor = new WriteExecutor(jdbc);
+    this.jdbc = jdbc;
     this.materializer = new Materializer(transformer, maxRows);
     this.transaction = transaction;
     this.idempotency = idempotency;
@@ -91,10 +94,25 @@ public final class WriteEngine {
 
   public WriteResult execute(
       TenantScope scope, PublishedIntegration integration, WriteRequest request) {
+    return execute(scope, integration, request, null);
+  }
+
+  /**
+   * Execução de teste (sandbox): mesma validação, mapeamento e execução, mas sem idempotência e com
+   * a transação sempre desfeita no fim, registrando os comandos em {@code trace}.
+   */
+  public WriteResult sandbox(
+      TenantScope scope, PublishedIntegration integration, WriteRequest request, SqlTrace trace) {
+    return execute(scope, integration, request, trace);
+  }
+
+  private WriteResult execute(
+      TenantScope scope, PublishedIntegration integration, WriteRequest request, SqlTrace trace) {
+    boolean sandbox = trace != null;
     Snapshot snapshot = integration.snapshot();
     String type = snapshot.operation().type();
     ParsedInput input = InputParser.parse(snapshot, request.pathVariables(), request.query());
-    String key = idempotencyKey(snapshot, request.idempotencyKey());
+    String key = sandbox ? null : idempotencyKey(snapshot, request.idempotencyKey());
     JsonNode body = BodyReader.read(request.body(), bodyLimit(integration));
     validateSchema(integration, body);
     JsonNode original = body;
@@ -112,7 +130,7 @@ public final class WriteEngine {
     }
     WriteResult result;
     try {
-      result = run(scope, integration, type, data, input.values(), body);
+      result = run(scope, integration, type, data, input.values(), body, trace);
     } catch (RuntimeException e) {
       if (reservation != null) {
         idempotency.release(reservation);
@@ -215,13 +233,47 @@ public final class WriteEngine {
    * O {@code afterExecute} roda ainda dentro da transação: se o script recusar a operação, nada é
    * confirmado.
    */
+  /**
+   * A transação desfeita por deadlock (1205) é repetida até 3 vezes com pausa curta: nada foi
+   * confirmado, então repetir é seguro (UPSERTs concorrentes na mesma chave podem se cruzar).
+   */
   private WriteResult run(
       TenantScope scope,
       PublishedIntegration integration,
       String type,
       RowData data,
       Map<String, String> params,
-      JsonNode body) {
+      JsonNode body,
+      SqlTrace trace) {
+    for (int attempt = 1; ; attempt++) {
+      try {
+        return attempt(scope, integration, type, data, params, body, trace);
+      } catch (DataAccessException e) {
+        if (attempt >= 3) {
+          throw translate(scope, integration, e);
+        }
+        pause(attempt);
+      }
+    }
+  }
+
+  private static void pause(int attempt) {
+    try {
+      Thread.sleep(10L * attempt + java.util.concurrent.ThreadLocalRandom.current().nextInt(20));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private WriteResult attempt(
+      TenantScope scope,
+      PublishedIntegration integration,
+      String type,
+      RowData data,
+      Map<String, String> params,
+      JsonNode body,
+      SqlTrace trace) {
+    WriteExecutor executor = trace == null ? this.executor : new WriteExecutor(jdbc, trace);
     try {
       Done done =
           TenantContext.supplyAs(
@@ -237,9 +289,15 @@ public final class WriteEngine {
                               default ->
                                   throw new IllegalStateException("Operação não é de escrita");
                             };
-                        return new Done(
-                            outcome,
-                            scripts.after(scope, integration, params, body, outcome.body()));
+                        Done result =
+                            new Done(
+                                outcome,
+                                scripts.after(scope, integration, params, body, outcome.body()));
+                        if (trace != null) {
+                          // sandbox: nada do que foi gravado sobrevive, nem gatilhos
+                          status.setRollbackOnly();
+                        }
+                        return result;
                       }));
       return new WriteResult(
           statusOf(integration.snapshot(), done.outcome()), done.response(), false);
@@ -248,6 +306,9 @@ public final class WriteEngine {
     } catch (TransactionTimedOutException e) {
       throw timeout();
     } catch (DataAccessException e) {
+      if (SqlErrors.isDeadlock(e)) {
+        throw e; // quem chama repete a transação
+      }
       throw translate(scope, integration, e);
     }
   }

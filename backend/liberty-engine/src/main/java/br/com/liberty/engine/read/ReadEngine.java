@@ -4,6 +4,7 @@ import br.com.liberty.domain.tenancy.TenantContext;
 import br.com.liberty.domain.tenancy.TenantScope;
 import br.com.liberty.engine.problem.ProblemException;
 import br.com.liberty.engine.route.PublishedIntegration;
+import br.com.liberty.engine.trace.SqlTrace;
 import br.com.liberty.infrastructure.catalog.ColumnInfo;
 import br.com.liberty.infrastructure.catalog.TableInfo;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
@@ -48,10 +49,24 @@ public final class ReadEngine {
       PublishedIntegration integration,
       Map<String, String> pathVariables,
       Map<String, List<String>> query) {
+    return execute(scope, integration, pathVariables, query, null);
+  }
+
+  /** Como {@link #execute}, registrando o comando SQL em {@code trace} (sandbox). */
+  public ReadResult execute(
+      TenantScope scope,
+      PublishedIntegration integration,
+      Map<String, String> pathVariables,
+      Map<String, List<String>> query,
+      SqlTrace trace) {
     var select = integration.snapshot().operation().select();
     ParsedInput input = InputParser.parse(integration.snapshot(), pathVariables, query);
     SelectPlan plan = plan(scope, integration, select, input);
+    long start = System.nanoTime();
     List<Map<String, Object>> rows = run(scope, plan);
+    if (trace != null) {
+      trace.record(plan.sql(), rows.size(), (System.nanoTime() - start) / 1_000_000);
+    }
     if (plan.single()) {
       if (rows.isEmpty()) {
         throw new ProblemException(

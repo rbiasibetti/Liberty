@@ -5,8 +5,10 @@ import br.com.liberty.engine.lifecycle.LifecycleService;
 import br.com.liberty.engine.lifecycle.LifecycleService.IntegrationView;
 import br.com.liberty.engine.lifecycle.LifecycleService.VersionView;
 import br.com.liberty.engine.problem.ProblemException;
+import br.com.liberty.engine.sandbox.SandboxService;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -34,13 +37,18 @@ class LifecycleController {
   /** Corpo de criação de integração. */
   record CreateRequest(String key, String name, String method, String route) {}
 
+  /** Entrada de uma execução de teste: parâmetros declarados e corpo. */
+  record SandboxRequest(Map<String, JsonNode> params, JsonNode body) {}
+
   /** Comentário de revisão ou publicação. */
   record CommentRequest(String comment) {}
 
   private final LifecycleService service;
+  private final SandboxService sandbox;
 
-  LifecycleController(LifecycleService service) {
+  LifecycleController(LifecycleService service, SandboxService sandbox) {
     this.service = service;
+    this.sandbox = sandbox;
   }
 
   @GetMapping("/integrations")
@@ -117,6 +125,18 @@ class LifecycleController {
       Authentication user) {
     return service.publish(
         slug, key, no, environment(env), user.getName(), body == null ? null : body.comment());
+  }
+
+  /** Executa a versão em HML com a transação sempre desfeita; devolve resultado, SQL e logs. */
+  @PostMapping("/integrations/{key}/versions/{no}/sandbox")
+  @PreAuthorize("@tenantAccess.hasRole(authentication, #slug, 'INTEGRATOR')")
+  SandboxService.Result sandbox(
+      @PathVariable String slug,
+      @PathVariable String key,
+      @PathVariable int no,
+      @RequestBody(required = false) SandboxRequest body) {
+    return sandbox.run(
+        slug, key, no, body == null ? null : body.params(), body == null ? null : body.body());
   }
 
   @PostMapping("/integrations/{key}/environments/{env}/rollback")

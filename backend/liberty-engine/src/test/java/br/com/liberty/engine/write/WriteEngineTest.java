@@ -470,6 +470,118 @@ class WriteEngineTest {
     assertThat(count("dbo.tb_log")).isEqualTo(1);
   }
 
+  // ---- sandbox ------------------------------------------------------------------------
+
+  private static WriteResult sandbox(
+      PublishedIntegration integration,
+      String body,
+      Map<String, String> path,
+      br.com.liberty.engine.trace.SqlTrace trace) {
+    return engine.sandbox(
+        SCOPE,
+        integration,
+        new WriteRequest(body.getBytes(StandardCharsets.UTF_8), path, Map.of(), null),
+        trace);
+  }
+
+  @Test
+  void sandboxRunsTheWholeTreeAndRecordsEveryStatementButKeepsNothing() throws SQLException {
+    var trace = new br.com.liberty.engine.trace.SqlTrace();
+
+    WriteResult result =
+        sandbox(
+            threeLevels(),
+            pedidoBody(
+                "SBX",
+                "{'produto':'A','qtd':1,'valor':1,'lotes':[{'codigo':'L'}]}".replace('\'', '"')),
+            Map.of(),
+            trace);
+
+    assertThat(result.status()).isEqualTo(201);
+    assertThat(result.body().path("rows").path("tb_item").asInt()).isEqualTo(1);
+    assertThat(trace.entries()).hasSizeGreaterThanOrEqualTo(3);
+    assertThat(trace.entries().getFirst().sql()).contains("INSERT INTO [dbo].[tb_pedido]");
+    assertThat(trace.entries()).allSatisfy(e -> assertThat(e.sql()).doesNotContain("SBX"));
+    assertNothingPersisted();
+  }
+
+  @Test
+  void sandboxUpdatesAndUpsertsLeaveExistingRowsUntouched() throws SQLException {
+    exec("INSERT INTO dbo.tb_cliente (codigo, nome, email) VALUES ('S1', N'Original', 'o@x')");
+    var trace = new br.com.liberty.engine.trace.SqlTrace();
+
+    WriteResult updated = sandbox(upsert(), "{\"nome\":\"Mudado\"}", Map.of("codigo", "S1"), trace);
+    WriteResult inserted = sandbox(upsert(), "{\"nome\":\"Novo\"}", Map.of("codigo", "S2"), trace);
+
+    assertThat(updated.status()).isEqualTo(200);
+    assertThat(inserted.status()).isEqualTo(201);
+    assertThat(scalar("SELECT nome FROM dbo.tb_cliente WHERE codigo = 'S1'")).isEqualTo("Original");
+    assertThat(count("dbo.tb_cliente")).isEqualTo(1);
+  }
+
+  @Test
+  void sandboxFailuresStillRollBackAndNeverReserveIdempotencyKeys() throws SQLException {
+    var trace = new br.com.liberty.engine.trace.SqlTrace();
+
+    ProblemException e =
+        catchThrowableOfType(
+            ProblemException.class,
+            () ->
+                sandbox(
+                    threeLevels(),
+                    pedidoBody("SBX2", "{'produto':'A','qtd':0,'valor':1}".replace('\'', '"')),
+                    Map.of(),
+                    trace));
+
+    assertThat(e.status()).isEqualTo(409);
+    assertThat(trace.entries()).isNotEmpty();
+    assertThat(idempotency.entries).isEmpty();
+    assertNothingPersisted();
+  }
+
+  @Test
+  void nothingPersistsAfterAThousandSandboxExecutions() throws Exception {
+    String ok =
+        pedidoBody(
+            "MIL",
+            "{'produto':'A','qtd':2,'valor':1,'lotes':[{'codigo':'L1'},{'codigo':'L2'}]},{'produto':'B','qtd':1,'valor':2}"
+                .replace('\'', '"'));
+    String broken = pedidoBody("MIL", "{'produto':'A','qtd':0,'valor':1}".replace('\'', '"'));
+    var integration = threeLevels();
+    java.util.concurrent.atomic.AtomicInteger succeeded =
+        new java.util.concurrent.atomic.AtomicInteger();
+    java.util.concurrent.atomic.AtomicInteger failed =
+        new java.util.concurrent.atomic.AtomicInteger();
+    try (ExecutorService pool = Executors.newFixedThreadPool(5)) {
+      List<Future<?>> futures = new ArrayList<>();
+      for (int i = 0; i < 1000; i++) {
+        boolean good = i % 10 != 0;
+        futures.add(
+            pool.submit(
+                () -> {
+                  try {
+                    sandbox(
+                        integration,
+                        good ? ok : broken,
+                        Map.of(),
+                        new br.com.liberty.engine.trace.SqlTrace());
+                    succeeded.incrementAndGet();
+                  } catch (ProblemException e) {
+                    failed.incrementAndGet();
+                  }
+                }));
+      }
+      for (Future<?> f : futures) {
+        f.get();
+      }
+    }
+
+    assertThat(succeeded.get()).isEqualTo(900);
+    assertThat(failed.get()).isEqualTo(100);
+    assertNothingPersisted();
+    assertThat(count("dbo.tb_tag")).isZero();
+  }
+
   // ---- UPSERT / UPDATE --------------------------------------------------------------------
 
   private static PublishedIntegration upsert() {

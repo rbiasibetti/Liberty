@@ -4,6 +4,7 @@ import br.com.liberty.engine.lifecycle.LifecycleService;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.route.PublicationSource;
 import br.com.liberty.engine.route.PublishedRoutes;
+import br.com.liberty.engine.sandbox.SandboxService;
 import br.com.liberty.engine.script.LibertyScriptProperties;
 import br.com.liberty.engine.script.ScriptHooks;
 import br.com.liberty.engine.script.WorkerScriptHooks;
@@ -132,5 +133,15 @@ public class EngineConfig {
       jakarta.persistence.EntityManager entityManager) {
     return new LifecycleService(
         tenants, integrations, versions, publications, snapshots, catalog, routes, entityManager);
+  }
+
+  @Bean
+  SandboxService sandboxService(
+      LifecycleService lifecycle,
+      ReadEngine reads,
+      WriteEngine writes,
+      ScriptHooks scripts,
+      SnapshotService snapshots) {
+    return new SandboxService(lifecycle, reads, writes, scripts, snapshots);
   }
 }

@@ -125,7 +125,8 @@ class CrossTenantAccessTest {
           Map.entry("clientId", "erp"),
           Map.entry("sub", "alguem"),
           Map.entry("role", "VIEWER"),
-          Map.entry("host", "api.exemplo.com"));
+          Map.entry("host", "api.exemplo.com"),
+          Map.entry("id", "1"));
 
   @SuppressWarnings("unchecked")
   private static List<Endpoint> endpoints() throws IOException {

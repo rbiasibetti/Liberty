@@ -275,6 +275,7 @@ public final class WriteEngine {
       JsonNode body,
       SqlTrace trace) {
     WriteExecutor executor = trace == null ? this.executor : new WriteExecutor(jdbc, trace);
+    scripts.attemptStarted();
     long start = System.nanoTime();
     long scriptBefore = RequestTimings.scriptNanosNow();
     try {
@@ -302,6 +303,9 @@ public final class WriteEngine {
                         }
                         return result;
                       }));
+      if (trace == null) {
+        scripts.committed(scope);
+      }
       return new WriteResult(
           statusOf(integration.snapshot(), done.outcome()), done.response(), false);
     } catch (TenantUnavailableException e) {
@@ -314,6 +318,7 @@ public final class WriteEngine {
       }
       throw translate(scope, integration, e);
     } finally {
+      this.scripts.attemptEnded();
       long elapsed = System.nanoTime() - start;
       long scripts = RequestTimings.scriptNanosNow() - scriptBefore;
       RequestTimings.addDb(Math.max(0, elapsed - scripts));

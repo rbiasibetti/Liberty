@@ -183,13 +183,19 @@ class ExecutionController {
     Object body = result.body();
     var afterExecute = match.integration().snapshot().scripts().afterExecute();
     if (afterExecute != null && !afterExecute.isBlank()) {
-      body =
-          scripts.after(
-              scope,
-              match.integration(),
-              scriptParams(match, request),
-              null,
-              JSON.valueToTree(body));
+      scripts.attemptStarted();
+      try {
+        body =
+            scripts.after(
+                scope,
+                match.integration(),
+                scriptParams(match, request),
+                null,
+                JSON.valueToTree(body));
+        scripts.committed(scope); // leitura não tem transação a confirmar
+      } finally {
+        scripts.attemptEnded();
+      }
     }
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())

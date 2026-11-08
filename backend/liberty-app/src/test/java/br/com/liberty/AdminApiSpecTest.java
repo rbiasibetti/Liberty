@@ -47,7 +47,8 @@ class AdminApiSpecTest {
           "br.com.liberty.web.LifecycleController",
           "br.com.liberty.security.MeController",
           "br.com.liberty.admin.PlatformAdminController",
-          "br.com.liberty.admin.AuditController"
+          "br.com.liberty.admin.AuditController",
+          "br.com.liberty.web.QueueController"
         }) {
       Class<?> controller = Class.forName(name);
       RequestMapping base =

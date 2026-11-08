@@ -256,6 +256,7 @@ public final class WorkerPool implements ScriptExecutor, AutoCloseable {
               case "named" -> host.named(p.get(0), p.get(1));
               case "lookup" -> host.lookup(p.get(0), p.get(1), p.get(2), p.get(3));
               case "fetch" -> host.fetch(p.get(0), p.get(1), p.get(2), p.get(3));
+              case "publish" -> host.publish(p.get(0), p.get(1));
               default -> throw new IllegalArgumentException("Operação desconhecida");
             };
         return Protocol.callResult(true, value, null);

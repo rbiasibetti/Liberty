@@ -282,6 +282,8 @@ class WriteContractTest {
             + " return b; }";
     String after =
         "function afterExecute(i) { if (i.body.clienteId === 98) fail(409, `regra de negocio`);"
+            + " if (i.body.clienteId === 97) queue.publish(`webhook`, { url: `https://api.exemplo.com/h`, body: { pedido: i.result.key.id } });"
+            + " if (i.body.clienteId === 96) { queue.publish(`webhook`, { url: `https://api.exemplo.com/h` }); fail(409, `desfaz`); }"
             + " const q = db.named(`qtd_itens`, { id: i.result.key.id });"
             + " return Object.assign({}, i.result, { itensGravados: q[0].n, origem: i.params.x }); }";
     publish(
@@ -596,6 +598,27 @@ class WriteContractTest {
     assertThat(before.getContentAsString()).contains("cliente bloqueado");
     assertThat(after.getStatus()).isEqualTo(409);
     assertThat(count("dbo.tb_pedido")).isEqualTo(pedidos);
+  }
+
+  @Test
+  void queueMessagesFromAScriptAreWrittenOnlyWhenTheWriteCommits() throws Exception {
+    String before = coreScalar("SELECT COUNT(*) FROM int_queue_message");
+    MockHttpServletResponse rolledBack =
+        postScript(pedido("fila-1", ITENS_OK).replace("'clienteId':7", "'clienteId':96"));
+    String afterRollback = coreScalar("SELECT COUNT(*) FROM int_queue_message");
+    MockHttpServletResponse committed =
+        postScript(pedido("fila-2", ITENS_OK).replace("'clienteId':7", "'clienteId':97"));
+
+    assertThat(rolledBack.getStatus()).isEqualTo(409);
+    assertThat(afterRollback).as("a escrita desfeita não publica").isEqualTo(before);
+    assertThat(committed.getStatus()).as(committed.getContentAsString()).isEqualTo(201);
+    assertThat(coreScalar("SELECT COUNT(*) FROM int_queue_message"))
+        .isEqualTo(String.valueOf(Long.parseLong(before) + 1));
+    assertThat(
+            coreScalar(
+                "SELECT TOP 1 CONCAT(t.slug, '|', m.environment, '|', m.queue_name, '|', m.status)"
+                    + " FROM int_queue_message m JOIN int_tenant t ON t.id = m.tenant_id ORDER BY m.id DESC"))
+        .isEqualTo("acme|HML|webhook|READY");
   }
 
   @Test

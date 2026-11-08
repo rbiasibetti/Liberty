@@ -3,6 +3,7 @@ package br.com.liberty.engine.script;
 import br.com.liberty.domain.tenancy.TenantContext;
 import br.com.liberty.domain.tenancy.TenantScope;
 import br.com.liberty.engine.outbound.OutboundHttp;
+import br.com.liberty.engine.queue.QueueService;
 import br.com.liberty.engine.read.ValueBinder;
 import br.com.liberty.infrastructure.catalog.ColumnInfo;
 import br.com.liberty.infrastructure.catalog.SqlIdentifiers;
@@ -47,18 +48,21 @@ final class ScriptHost implements ScriptExecutor.HostCalls {
   private final TenantCatalog catalog;
   private final NamedParameterJdbcTemplate jdbc;
   private final OutboundHttp.Session outbound;
+  private final QueueService.Session queue;
 
   ScriptHost(
       TenantScope scope,
       List<NamedQuery> namedQueries,
       TenantCatalog catalog,
       NamedParameterJdbcTemplate jdbc,
-      OutboundHttp.Session outbound) {
+      OutboundHttp.Session outbound,
+      QueueService.Session queue) {
     this.scope = scope;
     namedQueries.forEach(q -> queries.put(q.name(), q));
     this.catalog = catalog;
     this.jdbc = jdbc;
     this.outbound = outbound;
+    this.queue = queue;
   }
 
   @Override
@@ -172,6 +176,11 @@ final class ScriptHost implements ScriptExecutor.HostCalls {
   @Override
   public String fetch(String method, String url, String headersJson, String bodyJson) {
     return outbound.fetch(method, url, headersJson, bodyJson);
+  }
+
+  @Override
+  public String publish(String queueName, String payloadJson) {
+    return queue.publish(queueName, payloadJson);
   }
 
   private static Object scalar(JsonNode node) {

@@ -51,6 +51,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 class LifecycleContractTest {
 
   private static final CoreTestDatabase.Scratch TENANT_DB = CoreTestDatabase.create();
+  private static final CoreTestDatabase.Scratch CORE_DB = CoreTestDatabase.create();
   private static HttpServer vault;
   private static OidcStub oidc;
 
@@ -79,10 +80,9 @@ class LifecycleContractTest {
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
-    var core = CoreTestDatabase.create();
-    registry.add("spring.datasource.url", core::url);
-    registry.add("spring.datasource.username", core::user);
-    registry.add("spring.datasource.password", core::password);
+    registry.add("spring.datasource.url", CORE_DB::url);
+    registry.add("spring.datasource.username", CORE_DB::user);
+    registry.add("spring.datasource.password", CORE_DB::password);
     registry.add("spring.flyway.enabled", () -> "true");
     registry.add("spring.flyway.locations", () -> "classpath:db/migration/core");
     registry.add("spring.flyway.table", () -> "int_flyway_schema_history");
@@ -478,6 +478,82 @@ class LifecycleContractTest {
     assertThat(denied.getContentAsString())
         .as("o motivo técnico não vaza")
         .doesNotContain("nao-liberado");
+  }
+
+  @Test
+  void sandboxNeverPublishesQueueMessages() throws Exception {
+    call(
+        post("/api/v1/tenants/acme/integrations"),
+        "ana",
+        "{\"key\":\"sbx-fila\",\"name\":\"x\",\"method\":\"POST\",\"route\":\"/sbx-fila\"}");
+    String withAfter =
+        httpWrite("sbx-fila", "function beforeExecute(i){ return i; }")
+            .replace(
+                "\"beforeExecute\":\"function beforeExecute(i){ return i; }\"",
+                "\"afterExecute\":\"function afterExecute(i){ queue.publish('webhook', {url:'https://api.exemplo.com/h'}); return i.result; }\"");
+    call(put(base("sbx-fila") + "/draft"), "ana", withAfter);
+    long before = queued();
+
+    var response =
+        call(
+            post(base("sbx-fila") + "/versions/1/sandbox"),
+            "ana",
+            "{\"body\":{\"codigo\":\"F1\",\"nome\":\"x\"}}");
+
+    assertThat(response.getStatus()).as(response.getContentAsString()).isEqualTo(200);
+    assertThat(json(response)).containsEntry("succeeded", true);
+    assertThat(queued()).as("sandbox simula, não publica").isEqualTo(before);
+  }
+
+  private long queued() throws Exception {
+    try (Connection c =
+            DriverManager.getConnection(CORE_DB.url(), CORE_DB.user(), CORE_DB.password());
+        Statement st = c.createStatement();
+        var rs = st.executeQuery("SELECT COUNT(*) FROM int_queue_message")) {
+      rs.next();
+      return rs.getLong(1);
+    }
+  }
+
+  @Test
+  void queueAdministrationIsPerTenantAndRoleAndNeverShowsPayloads() throws Exception {
+    long acmeId = tenants.findBySlug("acme").orElseThrow().getId();
+    try (Connection c =
+            DriverManager.getConnection(CORE_DB.url(), CORE_DB.user(), CORE_DB.password());
+        Statement st = c.createStatement()) {
+      st.execute(
+          "INSERT INTO int_queue_message (tenant_id, environment, queue_name, payload, status, attempts, last_error, died_at)"
+              + " VALUES ("
+              + acmeId
+              + ", 'HML', 'webhook', '{\"segredo\":\"valor\"}', 'DEAD', 5, 'Destino recusou com 404', SYSUTCDATETIME())");
+    }
+
+    assertThat(call(get("/api/v1/tenants/acme/queues"), "dan", null).getStatus()).isEqualTo(200);
+    assertThat(call(get("/api/v1/tenants/acme/queues/dead"), "dan", null).getStatus())
+        .as("VIEWER não vê as mortas")
+        .isEqualTo(403);
+    var dead = call(get("/api/v1/tenants/acme/queues/dead"), "bia", null);
+    assertThat(dead.getStatus()).isEqualTo(200);
+    assertThat(dead.getContentAsString())
+        .contains("Destino recusou com 404", "\"attempts\":5")
+        .doesNotContain("segredo");
+    long id = Long.parseLong(dead.getContentAsString().replaceAll(".*\"id\":(\\d+).*", "$1"));
+    assertThat(
+            call(post("/api/v1/tenants/acme/queues/dead/" + id + "/requeue"), "ana", null)
+                .getStatus())
+        .as("INTEGRATOR não trata mortas")
+        .isEqualTo(403);
+    assertThat(
+            call(post("/api/v1/tenants/acme/queues/dead/" + id + "/requeue"), "bia", null)
+                .getStatus())
+        .isEqualTo(204);
+    assertThat(
+            call(post("/api/v1/tenants/acme/queues/dead/" + id + "/requeue"), "bia", null)
+                .getStatus())
+        .as("já não está morta")
+        .isEqualTo(404);
+    assertThat(call(delete("/api/v1/tenants/acme/queues/dead/999999"), "bia", null).getStatus())
+        .isEqualTo(404);
   }
 
   @Test

@@ -5,6 +5,7 @@ import br.com.liberty.engine.audit.RequestTimings;
 import br.com.liberty.engine.outbound.OutboundHttp;
 import br.com.liberty.engine.outbound.OutboundMode;
 import br.com.liberty.engine.problem.ProblemException;
+import br.com.liberty.engine.queue.QueueService;
 import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.infrastructure.catalog.TenantCatalog;
 import br.com.liberty.scripts.ScriptExecutor;
@@ -37,6 +38,7 @@ public final class WorkerScriptHooks implements ScriptHooks {
   private final NamedParameterJdbcTemplate jdbc;
   private final LibertyScriptProperties properties;
   private final OutboundHttp outbound;
+  private final QueueService queues;
   private final Map<String, Semaphore> bulkheads = new ConcurrentHashMap<>();
 
   public WorkerScriptHooks(
@@ -44,12 +46,29 @@ public final class WorkerScriptHooks implements ScriptHooks {
       TenantCatalog catalog,
       NamedParameterJdbcTemplate jdbc,
       LibertyScriptProperties properties,
-      OutboundHttp outbound) {
+      OutboundHttp outbound,
+      QueueService queues) {
     this.executor = executor;
     this.catalog = catalog;
     this.jdbc = jdbc;
     this.properties = properties;
     this.outbound = outbound;
+    this.queues = queues;
+  }
+
+  @Override
+  public void attemptStarted() {
+    QueueService.begin();
+  }
+
+  @Override
+  public void committed(TenantScope scope) {
+    queues.flush(scope);
+  }
+
+  @Override
+  public void attemptEnded() {
+    QueueService.end();
   }
 
   @Override
@@ -132,7 +151,8 @@ public final class WorkerScriptHooks implements ScriptHooks {
               integration.snapshot().namedQueries(),
               catalog,
               jdbc,
-              outbound.session(scope.tenant().value(), OutboundMode.simulated()));
+              outbound.session(scope.tenant().value(), OutboundMode.simulated()),
+              queues.session(scope, "afterExecute".equals(function), OutboundMode.simulated()));
       long start = System.nanoTime();
       ScriptExecutor.Outcome outcome = executor.run(request, host);
       RequestTimings.addScript(System.nanoTime() - start);

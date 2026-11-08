@@ -8,6 +8,13 @@ import br.com.liberty.engine.outbound.HostAllowList;
 import br.com.liberty.engine.outbound.OutboundHttp;
 import br.com.liberty.engine.outbound.OutboundProperties;
 import br.com.liberty.engine.outbound.RepositoryHostAllowList;
+import br.com.liberty.engine.queue.QueueAdmin;
+import br.com.liberty.engine.queue.QueueDispatcher;
+import br.com.liberty.engine.queue.QueueHandler;
+import br.com.liberty.engine.queue.QueueProperties;
+import br.com.liberty.engine.queue.QueueRepository;
+import br.com.liberty.engine.queue.QueueService;
+import br.com.liberty.engine.queue.WebhookHandler;
 import br.com.liberty.engine.read.ReadEngine;
 import br.com.liberty.engine.route.PublicationSource;
 import br.com.liberty.engine.route.PublishedRoutes;
@@ -47,7 +54,8 @@ import org.springframework.transaction.support.TransactionTemplate;
   LibertyScriptProperties.class,
   LibertyAuditProperties.class,
   LibertyLimitProperties.class,
-  OutboundProperties.class
+  OutboundProperties.class,
+  QueueProperties.class
 })
 public class EngineConfig {
 
@@ -140,13 +148,50 @@ public class EngineConfig {
   }
 
   @Bean
+  QueueRepository queueRepository(javax.sql.DataSource coreDataSource) {
+    return new QueueRepository(new org.springframework.jdbc.core.JdbcTemplate(coreDataSource));
+  }
+
+  @Bean
+  QueueHandler webhookQueueHandler(OutboundHttp outbound) {
+    return new WebhookHandler(outbound);
+  }
+
+  @Bean
+  QueueService queueService(
+      QueueRepository repository,
+      QueueProperties properties,
+      java.util.List<QueueHandler> handlers,
+      io.micrometer.core.instrument.MeterRegistry meters) {
+    return new QueueService(repository, properties, handlers, meters);
+  }
+
+  @Bean
+  @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+      name = "liberty.queue.enabled",
+      matchIfMissing = true)
+  QueueDispatcher queueDispatcher(
+      QueueRepository repository,
+      QueueProperties properties,
+      java.util.List<QueueHandler> handlers,
+      io.micrometer.core.instrument.MeterRegistry meters) {
+    return new QueueDispatcher(repository, properties, handlers, meters);
+  }
+
+  @Bean
+  QueueAdmin queueAdmin(QueueRepository repository) {
+    return new QueueAdmin(repository);
+  }
+
+  @Bean
   ScriptHooks scriptHooks(
       WorkerPool pool,
       TenantCatalog catalog,
       @Qualifier("tenantJdbcTemplate") NamedParameterJdbcTemplate jdbc,
       LibertyScriptProperties properties,
-      OutboundHttp outbound) {
-    return new WorkerScriptHooks(pool, catalog, jdbc, properties, outbound);
+      OutboundHttp outbound,
+      QueueService queues) {
+    return new WorkerScriptHooks(pool, catalog, jdbc, properties, outbound, queues);
   }
 
   @Bean

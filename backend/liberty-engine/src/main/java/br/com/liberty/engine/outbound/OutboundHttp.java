@@ -80,8 +80,22 @@ public final class OutboundHttp implements AutoCloseable {
   public static final class OutboundDenied extends IllegalArgumentException {
     private static final long serialVersionUID = 1L;
 
+    private final boolean transientFailure;
+
     OutboundDenied(String message) {
+      this(message, false);
+    }
+
+    OutboundDenied(String message, boolean transientFailure) {
       super(message);
+      this.transientFailure = transientFailure;
+    }
+
+    /**
+     * Falha de rede ou de prazo, que vale tentar de novo; recusa de política nunca é transitória.
+     */
+    public boolean transientFailure() {
+      return transientFailure;
     }
   }
 
@@ -438,7 +452,7 @@ public final class OutboundHttp implements AutoCloseable {
               || text.contains("cancel");
     }
     return new OutboundDenied(
-        timedOut ? "Tempo esgotado na chamada HTTP" : "Falha na chamada HTTP");
+        timedOut ? "Tempo esgotado na chamada HTTP" : "Falha na chamada HTTP", true);
   }
 
   @Override

@@ -258,6 +258,64 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AuditPage" }
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/queues:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: queueStats
+      summary: Mensagens do tenant por fila e estado (VIEWER)
+      responses:
+        "200":
+          description: Contagens
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/QueueStat" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/queues/dead:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: deadMessages
+      summary: Mensagens mortas do tenant, sem o conteúdo (PUBLISHER)
+      responses:
+        "200":
+          description: As 200 mais recentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DeadMessage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/queues/dead/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    delete:
+      operationId: discardDeadMessage
+      summary: Descarta uma mensagem morta (PUBLISHER)
+      responses:
+        "204":
+          description: Descartada
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/queues/dead/{id}/requeue:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    post:
+      operationId: requeueDeadMessage
+      summary: Devolve uma mensagem morta à fila, com as tentativas zeradas (PUBLISHER)
+      responses:
+        "204":
+          description: Devolvida
+        default: { $ref: "#/components/responses/Problem" }
   /api/v1/platform/tenants/{slug}/connections:
     parameters:
       - $ref: "#/components/parameters/Slug"
@@ -631,6 +689,25 @@ components:
         dbUsername: { type: string }
         poolMax: { type: integer, format: int32 }
         status: { type: string }
+    QueueStat:
+      type: object
+      required: [queue, status, count]
+      properties:
+        queue: { type: string }
+        status: { type: string, enum: [READY, PROCESSING, DEAD] }
+        count: { type: integer, format: int64 }
+        oldest: { type: [string, "null"], format: date-time }
+    DeadMessage:
+      type: object
+      required: [id, queue, environment, attempts]
+      properties:
+        id: { type: integer, format: int64 }
+        queue: { type: string }
+        environment: { type: string, enum: [HML, PRD] }
+        attempts: { type: integer, format: int32 }
+        lastError: { type: [string, "null"] }
+        createdAt: { type: [string, "null"], format: date-time }
+        diedAt: { type: [string, "null"], format: date-time }
     HttpHost:
       type: object
       required: [host, createdBy, createdAt]

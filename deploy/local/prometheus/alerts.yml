@@ -26,6 +26,18 @@ groups:
         annotations:
           summary: "p95 das execuções acima de 300 ms por 10 minutos"
 
+      - alert: LibertyFilaMensagemMorta
+        expr: increase(liberty_queue_messages_total{outcome="dead"}[10m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "Mensagem foi para a fila de mortas (fila {{ $labels.queue }}); trate-a pela API de filas do tenant"
+
+      - alert: LibertyFilaPublicacaoPerdida
+        expr: increase(liberty_queue_publish_failed_total[10m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Mensagens publicadas por scripts não foram gravadas depois do commit (banco central indisponível?)"
+
       - alert: LibertyAuditoriaDescartando
         expr: increase(liberty_audit_dropped_total[10m]) > 0
         labels: { severity: warning }

@@ -33,7 +33,8 @@ class CoreSchemaTest {
           "int_audit_execution",
           "int_audit_payload",
           "int_export_job",
-          "int_tenant_http_host");
+          "int_tenant_http_host",
+          "int_queue_message");
 
   private static final int CHECK_OR_FK = 547;
   private static final int UNIQUE_CONSTRAINT = 2627;
@@ -47,7 +48,7 @@ class CoreSchemaTest {
   static void migrate() throws SQLException {
     db = CoreTestDatabase.create();
     Flyway flyway = flyway();
-    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(4);
+    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(5);
     connection = DriverManager.getConnection(db.url(), db.user(), db.password());
   }
 
@@ -170,6 +171,21 @@ class CoreSchemaTest {
   void noForeignKeyCascades() throws SQLException {
     assertThat(scalar("SELECT COUNT(*) FROM sys.foreign_keys WHERE delete_referential_action <> 0"))
         .isZero();
+  }
+
+  @Test
+  void queueMessagesCarryTenantEnvironmentAndValidJson() throws SQLException {
+    long tenant = tenant();
+    String insert =
+        "INSERT INTO int_queue_message (tenant_id, environment, queue_name, payload, status)"
+            + " VALUES (?, ?, ?, ?, ?)";
+    sql(insert, tenant, "HML", "webhook", "{\"a\":1}", "READY");
+    assertSqlError(() -> sql(insert, tenant, "XXX", "webhook", "{}", "READY"), CHECK_OR_FK);
+    assertSqlError(() -> sql(insert, tenant, "HML", "Webhook", "{}", "READY"), CHECK_OR_FK);
+    assertSqlError(
+        () -> sql(insert, tenant, "HML", "webhook", "isto não é json", "READY"), CHECK_OR_FK);
+    assertSqlError(() -> sql(insert, tenant, "HML", "webhook", "{}", "DONE"), CHECK_OR_FK);
+    assertSqlError(() -> sql(insert, 999_999L, "HML", "webhook", "{}", "READY"), CHECK_OR_FK);
   }
 
   @Test

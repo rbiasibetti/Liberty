@@ -35,6 +35,18 @@ public interface ScriptHooks {
         }
       };
 
+  /** Uma tentativa de execução vai começar: descarta efeitos que uma tentativa anterior deixou. */
+  default void attemptStarted() {}
+
+  /**
+   * O banco do tenant confirmou: efeitos adiados dos scripts (mensagens de fila) são gravados
+   * agora.
+   */
+  default void committed(TenantScope scope) {}
+
+  /** A tentativa terminou (com sucesso ou não): o que não foi gravado é descartado. */
+  default void attemptEnded() {}
+
   /** Corpo (possivelmente substituído) que segue para o mapeamento. */
   JsonNode before(
       TenantScope scope,

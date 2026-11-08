@@ -10,6 +10,10 @@ import br.com.liberty.domain.tenancy.TenantScope;
 import br.com.liberty.engine.outbound.OutboundHttp;
 import br.com.liberty.engine.outbound.OutboundProperties;
 import br.com.liberty.engine.problem.ProblemException;
+import br.com.liberty.engine.queue.QueueProperties;
+import br.com.liberty.engine.queue.QueueRepository;
+import br.com.liberty.engine.queue.QueueService;
+import br.com.liberty.engine.queue.WebhookHandler;
 import br.com.liberty.engine.route.PublishedIntegration;
 import br.com.liberty.engine.route.RoutePattern;
 import br.com.liberty.infrastructure.catalog.JdbcCatalogIntrospector;
@@ -46,10 +50,30 @@ class ScriptHooksTest {
   private static final TenantScope SCOPE =
       new TenantScope(new TenantId("scripts"), EnvironmentKind.HML);
   private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final QueueProperties QUEUE_PROPS =
+      new QueueProperties(
+          true,
+          Duration.ofMillis(100),
+          4,
+          2,
+          3,
+          Duration.ZERO,
+          Duration.ofSeconds(1),
+          Duration.ofSeconds(30),
+          1024,
+          10,
+          2,
+          Duration.ofDays(1));
   private static final OutboundHttp OUTBOUND =
       new OutboundHttp(
           new OutboundProperties(Duration.ofSeconds(5), Duration.ofSeconds(1), 1024, 1024, 2, 4),
           (tenant, host) -> host.equals("api.exemplo.com"));
+  private static final QueueService QUEUES =
+      new QueueService(
+          new QueueRepository(new org.springframework.jdbc.core.JdbcTemplate()),
+          QUEUE_PROPS,
+          java.util.List.of(new WebhookHandler(OUTBOUND)),
+          new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
   private static final LibertyScriptProperties PROPS =
       new LibertyScriptProperties(
           1,
@@ -118,7 +142,7 @@ class ScriptHooksTest {
 
   private static WorkerScriptHooks hooks(Function<ScriptExecutor.Request, Outcome> executor) {
     return new WorkerScriptHooks(
-        (request, host) -> executor.apply(request), catalog, jdbc, PROPS, OUTBOUND);
+        (request, host) -> executor.apply(request), catalog, jdbc, PROPS, OUTBOUND, QUEUES);
   }
 
   private static Outcome ok(String json) {
@@ -231,7 +255,8 @@ class ScriptHooksTest {
                         catalog,
                         jdbc,
                         PROPS,
-                        OUTBOUND)
+                        OUTBOUND,
+                        QUEUES)
                     .after(SCOPE, integration, Map.of(), null, in));
     assertThat(busy.status()).isEqualTo(429);
     assertThat(busy.headers()).containsKey("Retry-After");
@@ -269,7 +294,8 @@ class ScriptHooksTest {
         integration("{}", QUERIES).snapshot().namedQueries(),
         catalog,
         jdbc,
-        OUTBOUND.session("acme", true));
+        OUTBOUND.session("acme", true),
+        QUEUES.session(SCOPE, true, true));
   }
 
   @Test
@@ -279,6 +305,29 @@ class ScriptHooksTest {
     assertThat(out.path("simulated").asBoolean()).isTrue();
     assertThatThrownBy(() -> host().fetch("GET", "https://outro.exemplo.com/", "{}", "null"))
         .hasMessageContaining("não liberado");
+  }
+
+  @Test
+  void queuePublishInTheHostIsSimulatedAndValidated() {
+    assertThat(
+            JSON.readTree(host().publish("webhook", "{\"url\":\"https://api.exemplo.com\"}"))
+                .path("simulated")
+                .asBoolean())
+        .isTrue();
+    assertThatThrownBy(() -> host().publish("inexistente", "{}"))
+        .hasMessageContaining("desconhecida");
+    assertThatThrownBy(() -> host().publish("webhook", "[1]")).hasMessageContaining("objeto");
+    assertThatThrownBy(() -> host().publish("webhook", "não é json"))
+        .hasMessageContaining("inválido");
+    assertThatThrownBy(() -> host().publish("webhook", "{\"x\":\"" + "a".repeat(2000) + "\"}"))
+        .hasMessageContaining("grande demais");
+    var session = QUEUES.session(SCOPE, true, true);
+    session.publish("webhook", "{}");
+    session.publish("webhook", "{}");
+    assertThatThrownBy(() -> session.publish("webhook", "{}")).hasMessageContaining("Limite");
+    assertThatThrownBy(() -> QUEUES.session(SCOPE, false, false).publish("webhook", "{}"))
+        .as("só em afterExecute")
+        .hasMessageContaining("afterExecute");
   }
 
   @Test

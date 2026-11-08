@@ -117,8 +117,13 @@ public final class SandboxService {
         JsonNode result;
         if ("SELECT".equals(snapshot.operation().type())) {
           var read = reads.execute(scope, integration, path, query, trace);
-          result =
-              scripts.after(scope, integration, declared, null, MAPPER.valueToTree(read.body()));
+          scripts.attemptStarted();
+          try {
+            result =
+                scripts.after(scope, integration, declared, null, MAPPER.valueToTree(read.body()));
+          } finally {
+            scripts.attemptEnded(); // sandbox: nada é publicado
+          }
           status = 200;
         } else {
           byte[] bytes =

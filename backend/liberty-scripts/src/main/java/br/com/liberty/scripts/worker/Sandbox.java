@@ -23,8 +23,8 @@ import org.graalvm.polyglot.io.IOAccess;
 
 /**
  * Executa um script num {@link Context} novo por execução: sem Java, arquivos, rede, threads,
- * processos nem ambiente; só a API {@code db}/{@code http}/{@code fail} injetada pelo pai. Prazo
- * por cancelamento e limite de instruções; saída e resultado limitados.
+ * processos nem ambiente; só a API {@code db}/{@code http}/{@code queue}/{@code fail} injetada pelo
+ * pai. Prazo por cancelamento e limite de instruções; saída e resultado limitados.
  */
 final class Sandbox implements AutoCloseable {
 
@@ -57,6 +57,10 @@ final class Sandbox implements AutoCloseable {
             }
             return JSON.parse(call(() => h.fetch(String(o.method || 'GET'), String(url), JSON.stringify(headers), JSON.stringify(body))));
           }
+        });
+        globalThis.queue = Object.freeze({
+          publish: (name, payload) =>
+            JSON.parse(call(() => h.publish(String(name), JSON.stringify(payload === undefined ? null : payload))))
         });
         globalThis.fail = (status, message) => h.fail(status | 0, String(message));
       })(__host);

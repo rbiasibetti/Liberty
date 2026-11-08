@@ -58,3 +58,14 @@ Base `/api/v1/platform/tenants/{slug}`; exige o papel de administrador da plataf
 | `GET /http-hosts` | Hosts que os scripts do tenant podem chamar com `http.fetch` |
 | `PUT /http-hosts/{host}` | Libera um nome DNS em minúsculas (com `:porta` se não for 443); IP, maiúsculas e ponto final são recusados (400). Idempotente |
 | `DELETE /http-hosts/{host}` | Retira o host; vale em até 5 s |
+
+## Filas do tenant (`/api/v1/tenants/{slug}/queues`)
+
+| Endpoint | Papel | Efeito |
+| --- | --- | --- |
+| `GET /queues` | VIEWER | Contagem por fila e estado (`READY`, `PROCESSING`, `DEAD`) |
+| `GET /queues/dead` | PUBLISHER | As 200 mensagens mortas mais recentes (fila, ambiente, tentativas, último erro; **nunca o conteúdo**) |
+| `POST /queues/dead/{id}/requeue` | PUBLISHER | Devolve à fila com as tentativas zeradas |
+| `DELETE /queues/dead/{id}` | PUBLISHER | Descarta |
+
+Mensagem de outro tenant responde 404.

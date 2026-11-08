@@ -43,6 +43,12 @@ public interface ScriptExecutor {
      * mensagem segura.
      */
     String fetch(String method, String url, String headersJson, String bodyJson);
+
+    /**
+     * Publica uma mensagem numa fila ({@code queue.publish}); {@code payloadJson} é um objeto JSON.
+     * Devolve {@code {queued, simulated}} em JSON.
+     */
+    String publish(String queue, String payloadJson);
   }
 
   /** O pool está cheio e a espera por um trabalhador acabou. */

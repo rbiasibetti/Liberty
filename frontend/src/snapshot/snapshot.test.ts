@@ -172,6 +172,7 @@ describe('scriptTypings', () => {
     const typings = scriptTypings({ type: 'object', properties: { x: { type: 'string' } } });
     expect(typings).toContain('declare const db');
     expect(typings).toContain('declare const http');
+    expect(typings).toContain('declare const queue');
     expect(typings).toContain('interface HttpResponse');
     expect(typings).toContain('declare function fail(status: number, message: string): never');
     expect(typings).toContain('interface BeforeInput');

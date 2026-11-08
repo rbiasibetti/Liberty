@@ -62,6 +62,14 @@ declare const http: {
    */
   fetch(url: string, options?: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; headers?: Record<string, string>; body?: string | Record<string, unknown> | unknown[] }): HttpResponse;
 };
+declare const queue: {
+  /**
+   * Publica uma mensagem numa fila do tenant (hoje só a fila "webhook": {url, method?, headers?, body?},
+   * entregue por HTTPS a um host liberado). Só em afterExecute, e a mensagem só é gravada depois que
+   * a escrita confirma; se a escrita desfaz, nada é publicado. No sandbox nada é publicado.
+   */
+  publish(name: 'webhook', payload: { url: string; method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE'; headers?: Record<string, string>; body?: unknown }): { queued: boolean; simulated: boolean };
+};
 /** Recusa a operação com um status 4xx e uma mensagem. */
 declare function fail(status: number, message: string): never;
 `;

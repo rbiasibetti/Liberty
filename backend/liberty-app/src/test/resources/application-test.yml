@@ -6,6 +6,9 @@ liberty:
     max-concurrent: 1000
   metrics:
     password: teste-metricas
+  queue:
+    # os consumidores têm testes próprios; nos testes de contrato as mensagens ficam paradas e visíveis
+    enabled: false
   vault:
     uri: http://127.0.0.1:8200
     token: teste

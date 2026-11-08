@@ -218,7 +218,8 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Testes de ponta a ponta no navegador (Playwright), teste de acesso entre tenants em todos os endpoints, runbooks e restauração do core testada
 - [ ] Liberação: carga (k6), DAST, pentest externo e piloto, ver [Portão 2](docs/portao-2.md)
 - [x] HTTP de saída dos scripts (`http.fetch`) com lista de hosts por tenant e defesa contra SSRF
-- [ ] Fase 2 (demais recursos: filas, exportações e DELETE, painel em tempo real)
+- [x] Filas por tenant (envelope, DLQ, bulkhead por tenant, fila `webhook`) com publicação pelos scripts depois do commit
+- [ ] Fase 2 (demais recursos: exportações e DELETE, painel em tempo real)
 
 ## Documentação
 

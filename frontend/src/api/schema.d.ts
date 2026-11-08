@@ -293,6 +293,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{slug}/queues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** Mensagens do tenant por fila e estado (VIEWER) */
+        get: operations["queueStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{slug}/queues/dead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** Mensagens mortas do tenant, sem o conteúdo (PUBLISHER) */
+        get: operations["deadMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{slug}/queues/dead/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Descarta uma mensagem morta (PUBLISHER) */
+        delete: operations["discardDeadMessage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{slug}/queues/dead/{id}/requeue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Devolve uma mensagem morta à fila, com as tentativas zeradas (PUBLISHER) */
+        post: operations["requeueDeadMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/tenants/{slug}/connections": {
         parameters: {
             query?: never;
@@ -656,6 +734,29 @@ export interface components {
             /** Format: int32 */
             poolMax: number;
             status: string;
+        };
+        QueueStat: {
+            queue: string;
+            /** @enum {string} */
+            status: "READY" | "PROCESSING" | "DEAD";
+            /** Format: int64 */
+            count: number;
+            /** Format: date-time */
+            oldest?: string | null;
+        };
+        DeadMessage: {
+            /** Format: int64 */
+            id: number;
+            queue: string;
+            /** @enum {string} */
+            environment: "HML" | "PRD";
+            /** Format: int32 */
+            attempts: number;
+            lastError?: string | null;
+            /** Format: date-time */
+            createdAt?: string | null;
+            /** Format: date-time */
+            diedAt?: string | null;
         };
         HttpHost: {
             host: string;
@@ -1135,6 +1236,96 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuditPage"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    queueStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contagens */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueStat"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deadMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description As 200 mais recentes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadMessage"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    discardDeadMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Descartada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    requeueDeadMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devolvida */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -40,6 +40,14 @@ class WorkerPoolTest {
         }
 
         @Override
+        public String publish(String queue, String payloadJson) {
+          if (queue.equals("negada")) {
+            throw new IllegalArgumentException("Fila desconhecida");
+          }
+          return "{\"queued\":true,\"queue\":\"" + queue + "\",\"n\":" + payloadJson.length() + "}";
+        }
+
+        @Override
         public String fetch(String method, String url, String headersJson, String bodyJson) {
           if (url.contains("proibido")) {
             throw new IllegalArgumentException("Host não liberado para este tenant");
@@ -113,6 +121,20 @@ class WorkerPoolTest {
         .contains("X-A")
         .contains("application/json")
         .contains(":1}");
+  }
+
+  @Test
+  void queuePublishGoesThroughTheParentAndRefusalsAreCatchable() {
+    Outcome o =
+        run(
+            "function main(i) { const a = queue.publish('webhook', { url: 'x' });"
+                + " let e; try { queue.publish('negada', {}); } catch (x) { e = x.message; }"
+                + " return { q: a.queue, queued: a.queued, e: e }; }",
+            "{}");
+
+    assertThat(o.status()).isEqualTo(Status.OK);
+    assertThat(o.json())
+        .isEqualTo("{\"q\":\"webhook\",\"queued\":true,\"e\":\"Fila desconhecida\"}");
   }
 
   @Test

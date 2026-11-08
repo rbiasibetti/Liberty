@@ -67,7 +67,7 @@ final class Materializer {
           "Escrita grande demais",
           "A requisição geraria mais de " + maxRows + " linhas");
     }
-    boolean inserts = !"UPDATE".equals(run.operationType);
+    boolean inserts = "INSERT".equals(run.operationType) || "UPSERT".equals(run.operationType);
     List<RowData.Cell> cells = new ArrayList<>();
     for (WritePlan.FieldPlan field : plan.fields()) {
       Object value = resolve(field, item, pointer, run);

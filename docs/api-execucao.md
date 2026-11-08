@@ -37,6 +37,10 @@ GET /acme/api/pedidos?cliente=2&periodo=2026-01-05,2026-01-07&sort=-vl_total&lim
 - **Idempotência:** envie `Idempotency-Key` (1 a 200 caracteres ASCII visíveis; obrigatório nas integrações que o exigem). Repetir a chave com o mesmo conteúdo devolve a resposta original, com `Idempotent-Replayed: true`, sem gravar de novo (por 24 h). Chave igual com conteúdo diferente é 409; chave ainda em andamento é 409 com `Retry-After`. Se a gravação falhar, a chave é liberada.
 - **Resposta:** INSERT devolve 201 com `key` (chave primária gerada) e `rows` (linhas por tabela); UPSERT, 201 ou 200 com `result` (`inserted` ou `updated`) e `key`; UPDATE, 200 com `updated` e `key`, ou 404 se a chave não existe. Os campos podem normalizar o valor com funções (`trim`, `upper`, `lower`, `digits`, `substring`, `replace`, `toDate`, `toDecimal`, `default`, `map`); valor que não converte volta como violação do campo. Campos ausentes no corpo não alteram a coluna em UPDATE e UPSERT; `null` grava NULL.
 
+## Remoção por chave (DELETE)
+
+`DELETE /{tenant}/api/{rota}` remove **uma** linha pela chave completa, vinda dos parâmetros da rota ou da query; não há corpo. Sem registro com a chave, 404; se a chave corresponder a mais de um, 409 e nada é removido. A resposta é `{ "deleted": 1, "key": { ... } }`. Não existe remoção em lote, por filtro ou em cascata pela API, e publicar uma integração DELETE exige um comentário de aprovação (ver [administração](api-administracao.md)).
+
 ## Scripts
 
 Integrações podem ter scripts JavaScript que ajustam o corpo antes da gravação (`beforeExecute`) e a resposta (`afterExecute`), e recusar a operação com um status 4xx. Para o consumidor, isso aparece como: `script-rejected` (o status e a mensagem escolhidos pela integração; em escrita, nada é gravado), `script-timeout` (504), `script-error` (500) ou `script-unavailable` (503, tente de novo).

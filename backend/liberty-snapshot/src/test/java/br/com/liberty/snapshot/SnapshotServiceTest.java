@@ -73,6 +73,52 @@ class SnapshotServiceTest {
   }
 
   @Test
+  void deleteRemovesByKeyOnlyWithoutBodyChildrenOrNonKeyFields() {
+    var parsed = service.parse(Fixtures.bytes(Fixtures.delete())).model();
+    assertThat(parsed.operation().type()).isEqualTo("DELETE");
+    assertThat(parsed.operation().write().root().keyColumns()).containsExactly("nr_documento");
+
+    String root = "/operation/write/root";
+    Map<String, ObjectNode> broken =
+        Map.of(
+            "delete_has_no_body",
+            set(Fixtures.delete(), "/request/bodySchema", Map.of("type", "object")),
+            "delete_no_children",
+            set(
+                Fixtures.delete(),
+                root + "/children",
+                List.of(
+                    Map.of(
+                        "table",
+                        "dbo.t",
+                        "arrayPath",
+                        "/x",
+                        "foreignKey",
+                        "a",
+                        "fields",
+                        List.of(Map.of("column", "a", "source", "/a"))))),
+            "delete_fields_from_params",
+            set(
+                Fixtures.delete(),
+                root + "/fields/0",
+                Map.of("column", "nr_documento", "source", "/x")),
+            "delete_only_key_fields",
+            set(
+                Fixtures.delete(),
+                root + "/fields",
+                List.of(
+                    Map.of("column", "nr_documento", "param", "documento"),
+                    Map.of("column", "nome", "constant", "x"))),
+            "method_operation_mismatch",
+            set(Fixtures.delete(), "/integration/method", "POST"),
+            "key_columns_required",
+            remove(Fixtures.delete(), root + "/keyColumns"));
+    broken.forEach(
+        (code, doc) ->
+            assertThat(errorsOf(doc)).as(code).extracting(FieldError::code).contains(code));
+  }
+
+  @Test
   void parsesSelectAndUpsertAndAppliesDefaults() {
     var select = service.parse(Fixtures.bytes(Fixtures.select())).model();
     var upsert = service.parse(Fixtures.bytes(Fixtures.upsert())).model();
@@ -169,7 +215,7 @@ class SnapshotServiceTest {
             "additionalProperties"),
         arg(
             "método fora da lista",
-            set(Fixtures.insert(), "/integration/method", "DELETE"),
+            set(Fixtures.insert(), "/integration/method", "TRACE"),
             "/integration/method",
             "enum"),
         arg(

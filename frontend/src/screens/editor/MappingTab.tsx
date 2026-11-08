@@ -227,7 +227,7 @@ function NodeEditor(props: NodeProps) {
           />
           {keyed && isRoot && (
             <MultiSelect
-              label="Chave completa (UPSERT e UPDATE)"
+              label="Chave completa (UPSERT, UPDATE e DELETE)"
               data={allColumns}
               value={node.keyColumns ?? []}
               disabled={readOnly}
@@ -330,9 +330,14 @@ interface Props {
 export function MappingTab({ slug, snapshot, readOnly, onChange }: Props) {
   const root = snapshot.operation.write?.root;
   if (!root) {
-    return <Text c="dimmed">O mapeamento vale para escritas (INSERT, UPSERT e UPDATE).</Text>;
+    return (
+      <Text c="dimmed">O mapeamento vale para escritas (INSERT, UPSERT, UPDATE e DELETE).</Text>
+    );
   }
-  const keyed = snapshot.operation.type === 'UPSERT' || snapshot.operation.type === 'UPDATE';
+  const keyed =
+    snapshot.operation.type === 'UPSERT' ||
+    snapshot.operation.type === 'UPDATE' ||
+    snapshot.operation.type === 'DELETE';
   const apply = (next: WriteNode) => {
     onChange({ ...snapshot, operation: { ...snapshot.operation, write: { root: next } } });
   };

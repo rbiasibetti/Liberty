@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "integration": { "key": "cliente-remover", "name": "Remover cliente", "method": "DELETE", "route": "/clientes/{documento}" },
+  "request": {
+    "params": [{ "name": "documento", "in": "path", "type": "string", "maxLength": 14 }]
+  },
+  "operation": {
+    "type": "DELETE",
+    "write": {
+      "root": {
+        "table": "dbo.tb_cliente",
+        "keyColumns": ["nr_documento"],
+        "fields": [{ "column": "nr_documento", "param": "documento" }]
+      }
+    }
+  }
+}

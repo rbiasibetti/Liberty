@@ -63,8 +63,14 @@ export function SchemaTab({ snapshot, readOnly, onChange }: Props) {
     setRevision((n) => n + 1);
   };
 
-  if (snapshot.operation.type === 'SELECT') {
-    return <Text c="dimmed">Leituras não têm corpo: o JSON Schema vale só para escritas.</Text>;
+  if (snapshot.operation.type === 'SELECT' || snapshot.operation.type === 'DELETE') {
+    return (
+      <Text c="dimmed">
+        {snapshot.operation.type === 'DELETE'
+          ? 'Remoções não têm corpo: a chave vem dos parâmetros da rota.'
+          : 'Leituras não têm corpo: o JSON Schema vale só para escritas.'}
+      </Text>
+    );
   }
   return (
     <Stack>

@@ -92,6 +92,39 @@ final class WriteExecutor {
     return new Outcome(false, body);
   }
 
+  /** Remove a linha da chave completa; nenhuma é 404 e mais de uma desfaz tudo (409). */
+  Outcome delete(RowData root) {
+    WritePlan plan = root.plan();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    StringBuilder sql =
+        new StringBuilder("DELETE FROM ")
+            .append(SqlIdentifiers.table(plan.table()))
+            .append(" WHERE ");
+    List<RowData.Cell> keys = root.cells();
+    for (int i = 0; i < keys.size(); i++) {
+      sql.append(i == 0 ? "" : " AND ")
+          .append(SqlIdentifiers.column(plan.table(), keys.get(i).column().name()))
+          .append(" = :k")
+          .append(i);
+      bind(params, "k" + i, keys.get(i));
+    }
+    int deleted = update(sql.toString(), params);
+    if (deleted == 0) {
+      throw new ProblemException(
+          404, "not-found", "Não encontrado", "Nenhum registro corresponde à chave informada");
+    }
+    if (deleted > 1) {
+      throw new ProblemException(
+          409,
+          "ambiguous-key",
+          "Chave ambígua",
+          "A chave informada corresponde a mais de um registro; nada foi removido");
+    }
+    ObjectNode body = BodyReader.mapper().createObjectNode().put("deleted", 1);
+    keyOf(root, body);
+    return new Outcome(false, body);
+  }
+
   // ---- INSERT ----------------------------------------------------------------------------
 
   private Object insertRow(

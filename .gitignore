@@ -32,6 +32,9 @@ deploy/local/prometheus/.metrics_password
 # artefato do tsc --build
 *.tsbuildinfo
 
+# Exportações geradas em desenvolvimento
+data/
+
 # Playwright
 frontend/test-results/
 frontend/playwright-report/

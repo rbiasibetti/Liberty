@@ -20,6 +20,15 @@ describe('blankSnapshot', () => {
     expect(write.request.bodySchema).toEqual({ type: 'object' });
     expect(OPERATION_BY_METHOD.PATCH).toEqual(['UPDATE']);
   });
+
+  it('remoção nasce sem corpo e com a chave vinda dos parâmetros', () => {
+    const remove = blankSnapshot({ key: 'r', name: 'R', method: 'DELETE', route: '/r/{id}' });
+
+    expect(remove.operation.type).toBe('DELETE');
+    expect(remove.request.bodySchema).toBeUndefined();
+    expect(remove.operation.write?.root.keyColumns).toEqual([]);
+    expect(OPERATION_BY_METHOD.DELETE).toEqual(['DELETE']);
+  });
 });
 
 describe('schemaFromSample', () => {

@@ -131,8 +131,8 @@ public class LifecycleService {
     if (name == null || name.isBlank() || name.length() > 255) {
       problems.add(new Violation("name", "invalid_value", "Informe um nome de até 255 caracteres"));
     }
-    if (method == null || !List.of("GET", "POST", "PUT", "PATCH").contains(method)) {
-      problems.add(new Violation("method", "invalid_value", "Use GET, POST, PUT ou PATCH"));
+    if (method == null || !List.of("GET", "POST", "PUT", "PATCH", "DELETE").contains(method)) {
+      problems.add(new Violation("method", "invalid_value", "Use GET, POST, PUT, PATCH ou DELETE"));
     }
     try {
       if (route == null) {
@@ -421,6 +421,15 @@ public class LifecycleService {
     problems.addAll(checkCatalog(scope, parsed.model()));
     if (!problems.isEmpty()) {
       throw unprocessable(problems);
+    }
+    if ("DELETE".equals(parsed.model().operation().type())
+        && (comment == null || comment.isBlank())) {
+      throw unprocessable(
+          List.of(
+              new Violation(
+                  "comment",
+                  "destructive_requires_comment",
+                  "Publicar uma remoção exige um comentário com o motivo da aprovação")));
     }
     checkRouteConflict(tenant, integration, environment);
     if (version.getState() == VersionState.IN_REVIEW) {

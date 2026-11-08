@@ -48,7 +48,9 @@ class CoreSchemaTest {
   static void migrate() throws SQLException {
     db = CoreTestDatabase.create();
     Flyway flyway = flyway();
-    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(5);
+    int available = flyway.info().all().length; // todas as migrações do pacote, sem número fixo
+    assertThat(available).isGreaterThanOrEqualTo(6);
+    assertThat(flyway.migrate().migrationsExecuted).isEqualTo(available);
     connection = DriverManager.getConnection(db.url(), db.user(), db.password());
   }
 
@@ -171,6 +173,13 @@ class CoreSchemaTest {
   void noForeignKeyCascades() throws SQLException {
     assertThat(scalar("SELECT COUNT(*) FROM sys.foreign_keys WHERE delete_referential_action <> 0"))
         .isZero();
+  }
+
+  @Test
+  void integrationsAcceptDeleteButNoOtherMethod() throws SQLException {
+    long tenant = tenant();
+    integration(tenant, "remove", "DELETE", "/remove/{id}");
+    assertSqlError(() -> integration(tenant, "trace", "TRACE", "/trace"), CHECK_OR_FK);
   }
 
   @Test

@@ -23,6 +23,11 @@ spring:
       fail-on-unknown-properties: true
 
 liberty:
+  exports:
+    # Pasta dos arquivos gerados (um volume dedicado e com backup em produção) e chave HMAC das URLs
+    # assinadas de download (32 caracteres ou mais; igual em todas as instâncias)
+    directory: ${LIBERTY_EXPORT_DIR:./data/exports}
+    signing-key: ${LIBERTY_EXPORT_SIGNING_KEY:}
   limits:
     # Padrão do plano (docs/requisitos-nao-funcionais.md); planos maiores em liberty.limits.plans.<PLANO>
     rate-per-second: 50

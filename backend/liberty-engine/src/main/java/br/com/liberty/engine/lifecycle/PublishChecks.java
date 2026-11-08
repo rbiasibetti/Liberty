@@ -41,6 +41,15 @@ final class PublishChecks {
               "before_execute_on_select",
               "beforeExecute só vale em integrações de escrita"));
     }
+    if ("DELETE".equals(type)
+        && snapshot.scripts().beforeExecute() != null
+        && !snapshot.scripts().beforeExecute().isBlank()) {
+      violations.add(
+          new Violation(
+              "/scripts/beforeExecute",
+              "before_execute_on_delete",
+              "DELETE não tem corpo: beforeExecute não se aplica"));
+    }
     for (int i = 0; i < snapshot.namedQueries().size(); i++) {
       String sql = snapshot.namedQueries().get(i).sql();
       if (sql.contains(";") || !READ_ONLY.matcher(sql).matches()) {

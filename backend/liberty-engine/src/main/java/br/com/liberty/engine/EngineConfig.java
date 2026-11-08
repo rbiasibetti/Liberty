@@ -3,6 +3,13 @@ package br.com.liberty.engine;
 import br.com.liberty.engine.audit.AuditMaintenance;
 import br.com.liberty.engine.audit.AuditRecorder;
 import br.com.liberty.engine.audit.LibertyAuditProperties;
+import br.com.liberty.engine.exports.ExportHandler;
+import br.com.liberty.engine.exports.ExportLinks;
+import br.com.liberty.engine.exports.ExportProperties;
+import br.com.liberty.engine.exports.ExportRepository;
+import br.com.liberty.engine.exports.ExportService;
+import br.com.liberty.engine.exports.LocalObjectStore;
+import br.com.liberty.engine.exports.ObjectStore;
 import br.com.liberty.engine.lifecycle.LifecycleService;
 import br.com.liberty.engine.outbound.HostAllowList;
 import br.com.liberty.engine.outbound.OutboundHttp;
@@ -55,7 +62,8 @@ import org.springframework.transaction.support.TransactionTemplate;
   LibertyAuditProperties.class,
   LibertyLimitProperties.class,
   OutboundProperties.class,
-  QueueProperties.class
+  QueueProperties.class,
+  ExportProperties.class
 })
 public class EngineConfig {
 
@@ -176,6 +184,61 @@ public class EngineConfig {
       java.util.List<QueueHandler> handlers,
       io.micrometer.core.instrument.MeterRegistry meters) {
     return new QueueDispatcher(repository, properties, handlers, meters);
+  }
+
+  @Bean
+  ExportRepository exportRepository(javax.sql.DataSource coreDataSource) {
+    return new ExportRepository(new org.springframework.jdbc.core.JdbcTemplate(coreDataSource));
+  }
+
+  @Bean
+  ObjectStore exportStore(ExportProperties properties) throws java.io.IOException {
+    return new LocalObjectStore(java.nio.file.Path.of(properties.directory()));
+  }
+
+  @Bean
+  ExportLinks exportLinks(ExportProperties properties) {
+    byte[] key;
+    if (properties.signingKey() == null || properties.signingKey().isBlank()) {
+      key = new byte[32];
+      new java.security.SecureRandom().nextBytes(key);
+      org.slf4j.LoggerFactory.getLogger(EngineConfig.class)
+          .warn(
+              "liberty.exports.signing-key não definida: links de download valem só nesta instância e até reiniciar");
+    } else {
+      key = properties.signingKey().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+    return new ExportLinks(key, java.time.Clock.systemUTC());
+  }
+
+  @Bean
+  QueueHandler exportQueueHandler(
+      ExportRepository repository,
+      ObjectStore exportStore,
+      PublishedRoutes routes,
+      ReadEngine reads,
+      ExportProperties properties,
+      QueueProperties queueProperties) {
+    return new ExportHandler(
+        repository,
+        exportStore,
+        routes,
+        reads,
+        properties,
+        queueProperties,
+        java.time.Clock.systemUTC());
+  }
+
+  @Bean
+  ExportService exportService(
+      ExportRepository repository,
+      ObjectStore exportStore,
+      ExportLinks links,
+      PublishedRoutes routes,
+      QueueService queues,
+      ExportProperties properties) {
+    return new ExportService(
+        repository, exportStore, links, routes, queues, properties, java.time.Clock.systemUTC());
   }
 
   @Bean

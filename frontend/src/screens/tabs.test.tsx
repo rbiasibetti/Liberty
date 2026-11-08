@@ -119,7 +119,7 @@ describe('aba de mapeamento', () => {
     };
     render(<Harness initial={upsert} tab="mapping" spy={spy} />);
 
-    expect(await screen.findByText('Chave completa (UPSERT e UPDATE)')).toBeTruthy();
+    expect(await screen.findByText('Chave completa (UPSERT, UPDATE e DELETE)')).toBeTruthy();
     await userEvent.click(first(await screen.findAllByLabelText('Tabela')));
     await userEvent.click(
       first(await screen.findAllByRole('option', { name: 'dbo.tb_item', hidden: true })),

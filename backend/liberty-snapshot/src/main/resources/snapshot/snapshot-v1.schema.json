@@ -15,7 +15,7 @@
       "properties": {
         "key": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 100 },
         "name": { "type": "string", "minLength": 1, "maxLength": 255 },
-        "method": { "enum": ["GET", "POST", "PUT", "PATCH"] },
+        "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
         "route": {
           "type": "string",
           "maxLength": 400,
@@ -37,7 +37,7 @@
       "additionalProperties": false,
       "required": ["type"],
       "properties": {
-        "type": { "enum": ["SELECT", "INSERT", "UPSERT", "UPDATE"] },
+        "type": { "enum": ["SELECT", "INSERT", "UPSERT", "UPDATE", "DELETE"] },
         "select": { "$ref": "#/$defs/select" },
         "write": { "$ref": "#/$defs/write" }
       },

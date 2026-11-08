@@ -12,7 +12,7 @@ Para usuários autenticados pelo provedor OIDC (token de usuário, nunca o de si
 | `POST /integrations/{key}/versions/{no}/submit` | INTEGRATOR | Envia o rascunho para revisão |
 | `POST /integrations/{key}/versions/{no}/reject` | PUBLISHER | Rejeita (`{comment}`) |
 | `POST /integrations/{key}/versions/{no}/sandbox` | INTEGRATOR | Executa a versão em HML com a transação sempre desfeita; devolve resultado, SQL e logs |
-| `POST /integrations/{key}/versions/{no}/publish/{env}` | PUBLISHER | Publica em `HML` ou `PRD` (`{comment}`) |
+| `POST /integrations/{key}/versions/{no}/publish/{env}` | PUBLISHER | Publica em `HML` ou `PRD` (`{comment}`); em integração DELETE o comentário com o motivo é obrigatório (422 `destructive_requires_comment`) |
 | `POST /integrations/{key}/environments/{env}/rollback` | PUBLISHER | Volta à publicação anterior |
 | `DELETE /integrations/{key}/environments/{env}/publication` | PUBLISHER | Despublica (204) |
 | `GET /environments/{env}/openapi.json` | VIEWER | OpenAPI das integrações publicadas |
@@ -58,6 +58,19 @@ Base `/api/v1/platform/tenants/{slug}`; exige o papel de administrador da plataf
 | `GET /http-hosts` | Hosts que os scripts do tenant podem chamar com `http.fetch` |
 | `PUT /http-hosts/{host}` | Libera um nome DNS em minúsculas (com `:porta` se não for 443); IP, maiúsculas e ponto final são recusados (400). Idempotente |
 | `DELETE /http-hosts/{host}` | Retira o host; vale em até 5 s |
+
+## Exportações (`/api/v1/tenants/{slug}/exports`)
+
+Exportam em CSV o resultado de uma integração de **leitura publicada** no ambiente pedido. Exigem INTEGRATOR (VIEWER não exporta).
+
+| Endpoint | Efeito |
+| --- | --- |
+| `POST /exports` | `{integration, environment, params?, format?}`: aceita (202) e gera o arquivo em segundo plano. `params` só com nomes declarados pela integração. XLSX ainda não é suportado (400) |
+| `GET /exports`, `GET /exports/{id}` | Estado: `PENDING`, `PROCESSING`, `COMPLETED` ou `FAILED` (com motivo genérico), validade do arquivo |
+| `POST /exports/{id}/link` | URL assinada `/api/v1/exports/download?token=...` de 10 minutos; 409 se não está pronta, 410 se o arquivo expirou |
+| `GET /api/v1/exports/download?token=` | **Sem login**: o token é a autorização. Devolve `text/csv` como anexo |
+
+Limites: 100 mil linhas, 100 MiB, 3 exportações simultâneas por tenant; o arquivo fica 24 h. O CSV é UTF-8 com BOM, e texto que começa com `= + - @` ganha um apóstrofo (proteção contra injeção de fórmula em planilhas). A ordem segue a ordenação da integração: defina uma ordenação estável para exportações consistentes.
 
 ## Filas do tenant (`/api/v1/tenants/{slug}/queues`)
 

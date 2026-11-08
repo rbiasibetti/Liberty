@@ -33,6 +33,10 @@ final class Fixtures {
     return load("select-pedidos.json");
   }
 
+  static ObjectNode delete() {
+    return load("delete-cliente.json");
+  }
+
   static ObjectNode upsert() {
     return load("upsert-cliente.json");
   }

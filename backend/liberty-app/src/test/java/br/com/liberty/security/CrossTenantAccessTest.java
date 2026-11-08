@@ -229,6 +229,9 @@ class CrossTenantAccessTest {
                 .get("access_token");
     List<String> problems = new ArrayList<>();
     for (Endpoint endpoint : endpoints()) {
+      if (endpoint.path().startsWith("/api/v1/exports/download")) {
+        continue; // público por desenho: a autorização é o token (ExportContractTest)
+      }
       int anonymous = status(endpoint, null);
       int system = status(endpoint, client);
       if (anonymous != 401) {

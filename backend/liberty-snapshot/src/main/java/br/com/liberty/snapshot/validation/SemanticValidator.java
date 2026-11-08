@@ -30,7 +30,8 @@ public final class SemanticValidator {
           "GET", Set.of("SELECT"),
           "POST", Set.of("INSERT", "UPSERT"),
           "PUT", Set.of("UPSERT", "UPDATE"),
-          "PATCH", Set.of("UPDATE"));
+          "PATCH", Set.of("UPDATE"),
+          "DELETE", Set.of("DELETE"));
 
   private final BodySchemaChecker bodySchemaChecker;
 
@@ -54,12 +55,20 @@ public final class SemanticValidator {
     JsonNode bodySchema = doc.path("request").path("bodySchema");
     if (!bodySchema.isMissingNode()) {
       errors.addAll(bodySchemaChecker.check(bodySchema, "/request/bodySchema"));
-    } else if (!"SELECT".equals(type)) {
+    } else if (!"SELECT".equals(type) && !"DELETE".equals(type)) {
       errors.add(
           new FieldError(
               "/request/bodySchema",
               "body_schema_required",
               "Operações de escrita precisam declarar o schema do corpo"));
+    }
+    if ("DELETE".equals(type)) {
+      if (!bodySchema.isMissingNode()) {
+        errors.add(
+            new FieldError(
+                "/request/bodySchema", "delete_has_no_body", "DELETE não tem corpo nem schema"));
+      }
+      checkDelete(doc.path("operation").path("write").path("root"), errors);
     }
     if ("SELECT".equals(type)) {
       checkSelect(doc.path("operation").path("select"), doc.path("request").path("params"), errors);
@@ -305,6 +314,39 @@ public final class SemanticValidator {
     }
   }
 
+  /**
+   * DELETE remove uma linha pela chave completa e nada mais: sem filhos (nada de cascata escondida)
+   * e com todos os campos vindos de parâmetros da rota ou da query, nunca de corpo.
+   */
+  private static void checkDelete(JsonNode root, List<FieldError> errors) {
+    if (root.path("children").size() > 0) {
+      errors.add(
+          new FieldError(
+              "/operation/write/root/children",
+              "delete_no_children",
+              "DELETE remove só a linha da chave; listas filhas não são permitidas"));
+    }
+    JsonNode fields = root.path("fields");
+    Set<String> keys = new HashSet<>();
+    root.path("keyColumns").forEach(k -> keys.add(k.asString().toLowerCase(Locale.ROOT)));
+    for (int i = 0; i < fields.size(); i++) {
+      if (!keys.contains(fields.get(i).path("column").asString().toLowerCase(Locale.ROOT))) {
+        errors.add(
+            new FieldError(
+                "/operation/write/root/fields/" + i,
+                "delete_only_key_fields",
+                "Em DELETE só as colunas da chave podem ser mapeadas"));
+      }
+      if (!fields.get(i).has("param")) {
+        errors.add(
+            new FieldError(
+                "/operation/write/root/fields/" + i,
+                "delete_fields_from_params",
+                "Em DELETE todo campo vem de um parâmetro (path ou query)"));
+      }
+    }
+  }
+
   private static Set<String> checkFields(
       JsonNode fields, String path, Set<String> declared, List<FieldError> errors) {
     Set<String> targets = new HashSet<>();
@@ -342,7 +384,7 @@ public final class SemanticValidator {
       String type,
       Set<String> targets,
       List<FieldError> errors) {
-    boolean keyed = "UPSERT".equals(type) || "UPDATE".equals(type);
+    boolean keyed = "UPSERT".equals(type) || "UPDATE".equals(type) || "DELETE".equals(type);
     if (root && keyed && !node.has("keyColumns")) {
       errors.add(
           new FieldError(
@@ -355,7 +397,7 @@ public final class SemanticValidator {
           new FieldError(
               path + "/keyColumns",
               "key_columns_not_allowed",
-              "keyColumns só vale no nó raiz de UPSERT e UPDATE"));
+              "keyColumns só vale no nó raiz de UPSERT, UPDATE e DELETE"));
     }
     JsonNode keys = node.path("keyColumns");
     for (int i = 0; i < keys.size(); i++) {

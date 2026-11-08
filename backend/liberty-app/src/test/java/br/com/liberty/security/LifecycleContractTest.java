@@ -481,6 +481,50 @@ class LifecycleContractTest {
   }
 
   @Test
+  void publishingARemovalNeedsAReasonAndTheSandboxNeverRemoves() throws Exception {
+    call(
+        post("/api/v1/tenants/acme/integrations"),
+        "ana",
+        "{\"key\":\"remover\",\"name\":\"x\",\"method\":\"DELETE\",\"route\":\"/remover/{codigo}\"}");
+    String delete =
+        "{\"schemaVersion\":1,\"integration\":{\"key\":\"remover\",\"name\":\"x\",\"method\":\"DELETE\",\"route\":\"/remover/{codigo}\"},"
+            + "\"request\":{\"params\":[{\"name\":\"codigo\",\"in\":\"path\",\"type\":\"string\"}]},"
+            + "\"operation\":{\"type\":\"DELETE\",\"write\":{\"root\":{\"table\":\"dbo.tb_cliente\","
+            + "\"keyColumns\":[\"codigo\"],\"fields\":[{\"column\":\"codigo\",\"param\":\"codigo\"}]}}}}";
+    assertThat(call(put(base("remover") + "/draft"), "ana", delete).getStatus()).isEqualTo(200);
+    var sandbox =
+        call(
+            post(base("remover") + "/versions/1/sandbox"),
+            "ana",
+            "{\"params\":{\"codigo\":\"C2\"}}");
+    assertThat(sandbox.getStatus()).as(sandbox.getContentAsString()).isEqualTo(200);
+    assertThat(json(sandbox)).containsEntry("succeeded", true);
+    assertThat(sandbox.getContentAsString()).contains("DELETE FROM [dbo].[tb_cliente]");
+    try (Connection c =
+            DriverManager.getConnection(TENANT_DB.url(), TENANT_DB.user(), TENANT_DB.password());
+        Statement st = c.createStatement();
+        var rs = st.executeQuery("SELECT COUNT(*) FROM dbo.tb_cliente WHERE codigo = 'C2'")) {
+      rs.next();
+      assertThat(rs.getInt(1)).as("o sandbox desfaz a remoção").isEqualTo(1);
+    }
+    call(post(base("remover") + "/versions/1/submit"), "ana", null);
+
+    var noReason = call(post(base("remover") + "/versions/1/publish/HML"), "bia", "{}");
+    var blank =
+        call(post(base("remover") + "/versions/1/publish/HML"), "bia", "{\"comment\":\"  \"}");
+    var withReason =
+        call(
+            post(base("remover") + "/versions/1/publish/HML"),
+            "bia",
+            "{\"comment\":\"Remoção por chave aprovada: cliente pediu exclusão\"}");
+
+    assertThat(noReason.getStatus()).isEqualTo(422);
+    assertThat(noReason.getContentAsString()).contains("destructive_requires_comment");
+    assertThat(blank.getStatus()).isEqualTo(422);
+    assertThat(withReason.getStatus()).as(withReason.getContentAsString()).isEqualTo(200);
+  }
+
+  @Test
   void sandboxNeverPublishesQueueMessages() throws Exception {
     call(
         post("/api/v1/tenants/acme/integrations"),

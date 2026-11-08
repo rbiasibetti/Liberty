@@ -84,6 +84,8 @@ class ResourceServerConfig {
                 requests
                     .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/exports/download")
+                    .permitAll()
                     .requestMatchers("/*/api/**")
                     .hasRole("CLIENT")
                     .requestMatchers("/api/v1/**")

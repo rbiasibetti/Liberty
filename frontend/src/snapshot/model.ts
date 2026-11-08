@@ -1,6 +1,6 @@
 /** Modelo do snapshot de integração (versão 1) como a interface o edita; o backend valida de verdade. */
-export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH';
-export type OperationType = 'SELECT' | 'INSERT' | 'UPSERT' | 'UPDATE';
+export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type OperationType = 'SELECT' | 'INSERT' | 'UPSERT' | 'UPDATE' | 'DELETE';
 
 export interface Param {
   name: string;
@@ -73,6 +73,7 @@ export const OPERATION_BY_METHOD: Record<Method, OperationType[]> = {
   POST: ['INSERT', 'UPSERT'],
   PUT: ['UPSERT', 'UPDATE'],
   PATCH: ['UPDATE'],
+  DELETE: ['DELETE'],
 };
 
 /** Snapshot inicial de uma integração recém-criada, coerente com o método e a rota. */
@@ -91,6 +92,9 @@ export function blankSnapshot(integration: Snapshot['integration']): Snapshot {
   };
   if (type === 'SELECT') {
     base.operation.select = { table: '', columns: [] };
+  } else if (type === 'DELETE') {
+    // remoção por chave: sem corpo, a chave vem dos parâmetros da rota
+    base.operation.write = { root: { table: '', fields: [], keyColumns: [] } };
   } else {
     base.request.bodySchema = { type: 'object' };
     base.operation.write = { root: { table: '', fields: [] } };

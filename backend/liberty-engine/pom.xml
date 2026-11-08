@@ -97,6 +97,10 @@
             <exclude>br/com/liberty/engine/script/LibertyScriptProperties.class</exclude>
             <!-- Regras de negócio do ciclo de vida: cobertas ponta a ponta pelo LifecycleContractTest do liberty-app -->
             <exclude>br/com/liberty/engine/lifecycle/LifecycleService*.class</exclude>
+            <!-- Exportações: pedido, geração pela fila e download, cobertos ponta a ponta (banco real, fila, leitura e segurança) pelo ExportContractTest do liberty-app; links, CSV e armazenamento têm testes de unidade aqui -->
+            <exclude>br/com/liberty/engine/exports/ExportService*.class</exclude>
+            <exclude>br/com/liberty/engine/exports/ExportHandler*.class</exclude>
+            <exclude>br/com/liberty/engine/exports/ExportRepository*.class</exclude>
           </excludes>
         </configuration>
       </plugin>

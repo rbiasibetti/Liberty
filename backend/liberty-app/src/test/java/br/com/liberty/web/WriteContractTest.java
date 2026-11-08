@@ -1,6 +1,7 @@
 package br.com.liberty.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -245,7 +246,7 @@ class WriteContractTest {
         "acme-hml",
         "integration:execute:pedido-criar integration:execute:pedido-idem"
             + " integration:execute:cliente-upsert integration:execute:cliente-atualizar"
-            + " integration:execute:pedido-script");
+            + " integration:execute:pedido-script integration:execute:cliente-remover");
     client("acme-leitor", "integration:execute:cliente-upsert");
 
     publish(
@@ -322,6 +323,16 @@ class WriteContractTest {
             "{'type':'UPSERT','write':{'root':" + cliente + "}}",
             "",
             ""));
+    publish(
+        "cliente-remover",
+        "DELETE",
+        "/clientes/{codigo}",
+        j(
+            "{'schemaVersion':1,'integration':{'key':'cliente-remover','name':'x','method':'DELETE',"
+                + "'route':'/clientes/{codigo}'},'request':{'params':"
+                + clienteParams
+                + "},'operation':{'type':'DELETE','write':{'root':{'table':'dbo.tb_cliente',"
+                + "'keyColumns':['codigo'],'fields':[{'column':'codigo','param':'codigo'}]}}}}"));
     publish(
         "cliente-atualizar",
         "PATCH",
@@ -619,6 +630,34 @@ class WriteContractTest {
                 "SELECT TOP 1 CONCAT(t.slug, '|', m.environment, '|', m.queue_name, '|', m.status)"
                     + " FROM int_queue_message m JOIN int_tenant t ON t.id = m.tenant_id ORDER BY m.id DESC"))
         .isEqualTo("acme|HML|webhook|READY");
+  }
+
+  @Test
+  void deleteRemovesOneRowByKeyWithoutBodyAndIsAudited() throws Exception {
+    sql("INSERT INTO dbo.tb_cliente (codigo, nome) VALUES ('DEL-1', N'a'), ('DEL-2', N'b')");
+    String token = token("acme-hml");
+
+    MockHttpServletResponse removed =
+        mvc.perform(
+                delete("/acme/api/clientes/DEL-1")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andReturn()
+            .getResponse();
+    MockHttpServletResponse again =
+        mvc.perform(
+                delete("/acme/api/clientes/DEL-1")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andReturn()
+            .getResponse();
+
+    assertThat(removed.getStatus()).as(removed.getContentAsString()).isEqualTo(200);
+    assertThat(json(removed)).containsEntry("deleted", 1L);
+    assertThat(removed.getContentAsString()).contains("DEL-1");
+    assertThat(again.getStatus()).isEqualTo(404);
+    assertThat(count("dbo.tb_cliente WHERE codigo = 'DEL-1'")).isZero();
+    assertThat(count("dbo.tb_cliente WHERE codigo = 'DEL-2'"))
+        .as("só a linha da chave")
+        .isEqualTo(1);
   }
 
   @Test

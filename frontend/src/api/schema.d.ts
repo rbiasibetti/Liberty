@@ -371,6 +371,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{slug}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** Exportações recentes do tenant (INTEGRATOR) */
+        get: operations["listExports"];
+        put?: never;
+        /** Pede a exportação em CSV de uma integração de leitura publicada (INTEGRATOR) */
+        post: operations["requestExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{slug}/exports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** Estado de uma exportação (INTEGRATOR) */
+        get: operations["getExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{slug}/exports/{id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** URL assinada e de vida curta para baixar o arquivo pronto (INTEGRATOR) */
+        post: operations["exportLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Baixa o arquivo pela URL assinada; sem login, o token é a autorização */
+        get: operations["downloadExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/tenants/{slug}/connections": {
         parameters: {
             query?: never;
@@ -589,7 +666,7 @@ export interface components {
             key: string;
             name: string;
             /** @enum {string} */
-            method: "GET" | "POST" | "PUT" | "PATCH";
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
             route: string;
             archived: boolean;
             /**
@@ -644,7 +721,7 @@ export interface components {
             key: string;
             name: string;
             /** @enum {string} */
-            method: "GET" | "POST" | "PUT" | "PATCH";
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
             route: string;
         };
         Version: {
@@ -734,6 +811,36 @@ export interface components {
             /** Format: int32 */
             poolMax: number;
             status: string;
+        };
+        ExportRequest: {
+            integration: string;
+            /** @enum {string} */
+            environment: "HML" | "PRD";
+            params?: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            format?: "CSV";
+        };
+        ExportJob: {
+            /** Format: int64 */
+            id: number;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+            format: string;
+            integration: string;
+            environment: string;
+            requestedBy: string;
+            error?: string | null;
+            /** Format: date-time */
+            createdAt?: string | null;
+            /** Format: date-time */
+            expiresAt?: string | null;
+        };
+        ExportLink: {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         QueueStat: {
             queue: string;
@@ -1326,6 +1433,127 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listExports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description As 50 mais recentes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportJob"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    requestExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Pedido aceito; o arquivo é gerado em segundo plano */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportJob"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportJob"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    exportLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    downloadExport: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description O arquivo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
             };
             default: components["responses"]["Problem"];
         };

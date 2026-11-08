@@ -50,7 +50,7 @@ final class WritePlanner {
     if (!table.writable()) {
       throw new ConfigurationException("Tabela somente leitura: " + table.name());
     }
-    boolean inserts = !"UPDATE".equals(operationType);
+    boolean inserts = "INSERT".equals(operationType) || "UPSERT".equals(operationType);
     Set<String> mapped = new HashSet<>();
     List<WritePlan.FieldPlan> fields = new ArrayList<>();
     for (Field field : node.fields()) {

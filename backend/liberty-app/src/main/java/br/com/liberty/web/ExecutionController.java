@@ -218,7 +218,8 @@ class ExecutionController {
   private ResponseEntity<Object> write(
       HttpServletRequest request, TenantScope scope, RouteMatch match) {
     int limit = WriteEngine.bodyLimit(match.integration());
-    byte[] body = readBody(request, limit);
+    byte[] body =
+        "DELETE".equals(match.integration().method()) ? new byte[0] : readBody(request, limit);
     WriteResult result =
         writes.execute(
             scope,

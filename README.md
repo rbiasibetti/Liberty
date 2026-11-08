@@ -219,7 +219,8 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [ ] Liberação: carga (k6), DAST, pentest externo e piloto, ver [Portão 2](docs/portao-2.md)
 - [x] HTTP de saída dos scripts (`http.fetch`) com lista de hosts por tenant e defesa contra SSRF
 - [x] Filas por tenant (envelope, DLQ, bulkhead por tenant, fila `webhook`) com publicação pelos scripts depois do commit
-- [ ] Fase 2 (demais recursos: exportações e DELETE, painel em tempo real)
+- [x] Exportações em CSV (fila, URL assinada, só o tenant dono baixa) e remoção por chave com aprovação reforçada
+- [ ] Fase 2 (demais recursos: painel em tempo real e alertas por WebSocket)
 
 ## Documentação
 

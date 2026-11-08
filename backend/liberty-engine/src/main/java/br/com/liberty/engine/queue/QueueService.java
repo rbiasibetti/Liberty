@@ -113,6 +113,23 @@ public class QueueService {
     return new Session(scope, allowed, simulate);
   }
 
+  /**
+   * Enfileira direto, sem esperar commit: para o motor (exportações), não para scripts. Respeita o
+   * teto de pendentes do tenant.
+   */
+  public void enqueue(TenantScope scope, String queue, String payloadJson) {
+    if (!queues.contains(queue)) {
+      throw new Rejected("Fila desconhecida");
+    }
+    long tenantId = tenantId(scope.tenant().value());
+    if (repository.pending(tenantId) >= properties.maxPendingPerTenant()) {
+      throw new Rejected("Fila do tenant cheia");
+    }
+    repository.enqueue(
+        tenantId, scope.environment().name(), queue, payloadJson, MDC.get("requestId"));
+    meters.counter("liberty.queue.published", "queue", queue).increment();
+  }
+
   /** Começa uma tentativa de execução: descarta o que uma tentativa anterior deixou. */
   public static void begin() {
     OUTBOX.set(new ArrayList<>());

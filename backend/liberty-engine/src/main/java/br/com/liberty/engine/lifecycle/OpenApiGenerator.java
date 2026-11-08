@@ -70,6 +70,8 @@ public final class OpenApiGenerator {
       ObjectNode sort = parameters.addObject();
       sort.put("name", "sort").put("in", "query").put("required", false);
       sort.putObject("schema").put("type", "string");
+    } else if ("DELETE".equals(type)) {
+      op.put("description", "Remove a linha da chave informada; 404 se não existir.");
     } else {
       ObjectNode key = parameters.addObject();
       key.put("name", "Idempotency-Key").put("in", "header");
@@ -115,6 +117,8 @@ public final class OpenApiGenerator {
   private static List<String> problems(String type) {
     return "SELECT".equals(type)
         ? List.of("400", "401", "403", "404", "429", "503", "504")
-        : List.of("400", "401", "403", "404", "409", "413", "415", "422", "429", "503", "504");
+        : "DELETE".equals(type)
+            ? List.of("400", "401", "403", "404", "409", "422", "429", "503", "504")
+            : List.of("400", "401", "403", "404", "409", "413", "415", "422", "429", "503", "504");
   }
 }

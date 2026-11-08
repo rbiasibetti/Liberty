@@ -113,9 +113,18 @@ public final class WriteEngine {
     Snapshot snapshot = integration.snapshot();
     String type = snapshot.operation().type();
     ParsedInput input = InputParser.parse(snapshot, request.pathVariables(), request.query());
-    String key = sandbox ? null : idempotencyKey(snapshot, request.idempotencyKey());
-    JsonNode body = BodyReader.read(request.body(), bodyLimit(integration));
-    validateSchema(integration, body);
+    String key =
+        sandbox || "DELETE".equals(type)
+            ? null
+            : idempotencyKey(snapshot, request.idempotencyKey());
+    boolean delete = "DELETE".equals(type);
+    JsonNode body =
+        delete
+            ? BodyReader.mapper().createObjectNode()
+            : BodyReader.read(request.body(), bodyLimit(integration));
+    if (!delete) {
+      validateSchema(integration, body);
+    }
     JsonNode original = body;
     body = scripts.before(scope, integration, input.values(), body);
     RowData data = materialize(scope, integration, type, body, input);
@@ -290,6 +299,7 @@ public final class WriteEngine {
                               case "INSERT" -> executor.insert(data);
                               case "UPSERT" -> executor.upsert(data);
                               case "UPDATE" -> executor.updateOnly(data);
+                              case "DELETE" -> executor.delete(data);
                               default ->
                                   throw new IllegalStateException("Operação não é de escrita");
                             };

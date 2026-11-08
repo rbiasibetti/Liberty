@@ -316,6 +316,87 @@ paths:
         "204":
           description: Devolvida
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/exports:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: listExports
+      summary: Exportações recentes do tenant (INTEGRATOR)
+      responses:
+        "200":
+          description: As 50 mais recentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ExportJob" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: requestExport
+      summary: Pede a exportação em CSV de uma integração de leitura publicada (INTEGRATOR)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExportRequest" }
+      responses:
+        "202":
+          description: Pedido aceito; o arquivo é gerado em segundo plano
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExportJob" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/exports/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      operationId: getExport
+      summary: Estado de uma exportação (INTEGRATOR)
+      responses:
+        "200":
+          description: Estado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExportJob" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/tenants/{slug}/exports/{id}/link:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    post:
+      operationId: exportLink
+      summary: URL assinada e de vida curta para baixar o arquivo pronto (INTEGRATOR)
+      responses:
+        "200":
+          description: Link
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExportLink" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/exports/download:
+    get:
+      operationId: downloadExport
+      summary: Baixa o arquivo pela URL assinada; sem login, o token é a autorização
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: O arquivo
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Problem" }
   /api/v1/platform/tenants/{slug}/connections:
     parameters:
       - $ref: "#/components/parameters/Slug"
@@ -552,7 +633,7 @@ components:
       properties:
         key: { type: string }
         name: { type: string }
-        method: { type: string, enum: [GET, POST, PUT, PATCH] }
+        method: { type: string, enum: [GET, POST, PUT, PATCH, DELETE] }
         route: { type: string }
         archived: { type: boolean }
         draftVersionNo: { type: [integer, "null"], format: int32, description: Rascunho pendente }
@@ -594,7 +675,7 @@ components:
       properties:
         key: { type: string }
         name: { type: string }
-        method: { type: string, enum: [GET, POST, PUT, PATCH] }
+        method: { type: string, enum: [GET, POST, PUT, PATCH, DELETE] }
         route: { type: string }
     Version:
       type: object
@@ -689,6 +770,35 @@ components:
         dbUsername: { type: string }
         poolMax: { type: integer, format: int32 }
         status: { type: string }
+    ExportRequest:
+      type: object
+      required: [integration, environment]
+      properties:
+        integration: { type: string }
+        environment: { type: string, enum: [HML, PRD] }
+        params:
+          type: object
+          additionalProperties: { type: string }
+        format: { type: string, enum: [CSV] }
+    ExportJob:
+      type: object
+      required: [id, status, format, integration, environment, requestedBy]
+      properties:
+        id: { type: integer, format: int64 }
+        status: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED] }
+        format: { type: string }
+        integration: { type: string }
+        environment: { type: string }
+        requestedBy: { type: string }
+        error: { type: [string, "null"] }
+        createdAt: { type: [string, "null"], format: date-time }
+        expiresAt: { type: [string, "null"], format: date-time }
+    ExportLink:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url: { type: string }
+        expiresAt: { type: string, format: date-time }
     QueueStat:
       type: object
       required: [queue, status, count]

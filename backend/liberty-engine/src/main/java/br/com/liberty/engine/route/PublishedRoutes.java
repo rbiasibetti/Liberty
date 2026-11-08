@@ -55,6 +55,11 @@ public final class PublishedRoutes {
     return cache.get(scope).table().resolve(method, path);
   }
 
+  /** A integração publicada em {@code scope} com esta chave. */
+  public java.util.Optional<PublishedIntegration> find(TenantScope scope, String key) {
+    return cache.get(scope).table().byKey(key);
+  }
+
   /** Descarta a tabela do tenant: a próxima requisição relê as publicações. */
   public void invalidate(TenantScope scope) {
     cache.invalidate(scope);

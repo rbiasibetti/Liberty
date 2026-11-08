@@ -41,3 +41,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0033](0033-testes-de-ponta-a-ponta.md) | E21 | Testes de ponta a ponta no navegador |
 | [0034](0034-http-de-saida.md) | E22 | HTTP de saída dos scripts (http.fetch) |
 | [0035](0035-filas.md) | E23 | Filas por tenant |
+| [0036](0036-exportacoes-e-remocao.md) | E24 | Exportações e remoção por chave |

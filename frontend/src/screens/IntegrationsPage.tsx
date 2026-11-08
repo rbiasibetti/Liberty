@@ -71,7 +71,7 @@ function NewIntegration({ slug, onClose }: { slug: string; onClose: () => void }
         />
         <Select
           label="Método"
-          data={['GET', 'POST', 'PUT', 'PATCH']}
+          data={['GET', 'POST', 'PUT', 'PATCH', 'DELETE']}
           value={method}
           onChange={setMethod}
           allowDeselect={false}

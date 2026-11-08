@@ -76,6 +76,11 @@ public final class RouteTable {
     return new RouteTable(List.copyOf(kept));
   }
 
+  /** A integração publicada com esta chave, se houver. */
+  public Optional<PublishedIntegration> byKey(String key) {
+    return integrations.stream().filter(i -> i.key().equals(key)).findFirst();
+  }
+
   public int size() {
     return integrations.size();
   }

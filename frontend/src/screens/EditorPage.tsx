@@ -200,7 +200,7 @@ export function EditorPage() {
             slug={slug}
             integrationKey={key}
             versionNo={savedVersion}
-            hasBody={snapshot.operation.type !== 'SELECT'}
+            hasBody={snapshot.operation.type !== 'SELECT' && snapshot.operation.type !== 'DELETE'}
           />
         }
       />

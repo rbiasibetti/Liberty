@@ -186,7 +186,10 @@ public final class WorkerPool implements ScriptExecutor, AutoCloseable {
             || END.equals(line)
             || !"ready".equals(Protocol.read(line).path("type").asString())) {
           kill();
-          throw new IOException("O trabalhador não iniciou");
+          throw new IOException(
+              "O trabalhador não iniciou com o classpath ["
+                  + config.classpath()
+                  + "]; confira liberty.scripts.worker-classpath (um jar executável do Spring Boot não serve)");
         }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();

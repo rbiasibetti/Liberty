@@ -23,6 +23,10 @@ spring:
       fail-on-unknown-properties: true
 
 liberty:
+  scripts:
+    # Classpath do processo trabalhador de script. Vazio usa o da aplicação, que só serve fora de um
+    # jar executável; a imagem aponta para a pasta worker-lib (pasta/*), ver backend/Dockerfile
+    worker-classpath: ${LIBERTY_SCRIPTS_WORKER_CLASSPATH:}
   exports:
     # Pasta dos arquivos gerados (um volume dedicado e com backup em produção) e chave HMAC das URLs
     # assinadas de download (32 caracteres ou mais; igual em todas as instâncias)

@@ -51,6 +51,53 @@
   <build>
     <plugins>
       <plugin>
+        <!--
+          Classpath do processo trabalhador: este módulo e tudo de que ele precisa, em jars comuns.
+          Um jar executável do Spring Boot guarda as classes em jars aninhados, que um java -cp não
+          enxerga; a imagem de produção copia esta pasta e aponta liberty.scripts.worker-classpath
+          para ela (pasta/*). Sem Spring, sem o resto da aplicação: o trabalhador não tem acesso a nada.
+        -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>worker-lib</id>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <outputDirectory>${project.build.directory}/worker-lib</outputDirectory>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>worker-lib-self</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <outputDirectory>${project.build.directory}/worker-lib</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>${project.build.finalName}.jar</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!-- Ponto de entrada do processo trabalhador: exercido pelo WorkerPoolTest em processo separado -->
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>

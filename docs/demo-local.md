@@ -31,6 +31,6 @@ Roteiro sugerido: como `integrador`, crie uma integração `POST /pedidos`, gere
 
 ## Limites desta demonstração
 
-- Roda pelo classpath de testes do Maven, **não pela imagem de produção**: o empacotamento dos scripts na imagem ainda é pendência (A01 do [backlog da fase 3](fase-3-backlog.md)).
+- Roda pelo classpath de testes do Maven, **não pela imagem de produção**. O jar de produção tem fumaça própria (`scripts/smoke-jar.sh`); a imagem ainda não foi construída (A01 do [backlog da fase 3](fase-3-backlog.md)).
 - OIDC e Vault são falsos; os dados somem ao parar; não há observabilidade nem a fila de exportações persistente.
 - Serve para validar fluxos e a interface, não para medir desempenho nem para expor a outras pessoas na rede.

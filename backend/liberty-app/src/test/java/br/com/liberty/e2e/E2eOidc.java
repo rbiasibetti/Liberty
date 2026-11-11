@@ -79,6 +79,13 @@ final class E2eOidc implements AutoCloseable {
           ex.close();
         });
     server.createContext(
+        "/__token",
+        ex -> {
+          String sub = query(ex).getOrDefault("sub", currentUser);
+          List<String> roles = sub.equals("admin") ? List.of("liberty-platform-admin") : List.of();
+          json(ex, 200, "{\"access_token\":\"" + accessToken(sub, roles) + "\"}");
+        });
+    server.createContext(
         "/__user",
         ex -> {
           currentUser = query(ex).getOrDefault("sub", currentUser);

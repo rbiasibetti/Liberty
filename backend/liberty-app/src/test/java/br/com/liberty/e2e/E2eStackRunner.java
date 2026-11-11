@@ -160,6 +160,13 @@ class E2eStackRunner {
             "conexão " + env + " -> " + saved.statusCode() + " " + saved.body());
       }
     }
+    java.nio.file.Files.writeString(
+        Path.of("target", "e2e-info.properties"),
+        "coreUrl="
+            + CORE.url()
+            + "\nvaultUri=http://127.0.0.1:"
+            + vault.getAddress().getPort()
+            + "\n");
     ready = true;
 
     Path stop = Path.of("target", "e2e.stop");

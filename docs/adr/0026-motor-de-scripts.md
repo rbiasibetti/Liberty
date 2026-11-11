@@ -32,5 +32,7 @@ O ADR 0017 decidiu isolar scripts de integradores (GraalJS Community) em JVMs tr
 ## Consequências
 
 - O `-cp` do trabalhador é o classpath da aplicação (`liberty.scripts.worker-classpath` o substitui). Em um jar executável do Spring Boot (jars aninhados) isso não funciona: a imagem de produção deve rodar com classpath explodido ou apontar o `worker-classpath` para os jars do módulo. Ajustar o empacotamento fica para a E15/E16.
+
+**Resolvido (A01 da fase 3).** O módulo `liberty-scripts` gera `target/worker-lib` (o próprio jar e suas dependências de execução, em jars comuns: GraalJS, Jackson, SLF4J; sem Spring nem o resto da aplicação). A imagem copia a pasta para `/app/worker-lib` e define `LIBERTY_SCRIPTS_WORKER_CLASSPATH=/app/worker-lib/*`. O `PackagedWorkerTest` prova que só essa pasta roda scripts com toda a API do anfitrião e interrompe um laço infinito, e `scripts/smoke-jar.sh` sobe o jar executável de verdade e executa `beforeExecute` e `afterExecute` no sandbox. Sem a pasta, o jar responde 429 ("scripts demais em execução") e o log traz o erro do classpath: a imagem em si ainda não foi construída aqui (sem Docker).
 - A memória do contêiner precisa cobrir `poolSize × (heap + 100 MB)`.
 - Métricas do pool (ocupados, mortos, espera) entram na E17.

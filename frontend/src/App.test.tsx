@@ -100,9 +100,10 @@ describe('aplicação', () => {
     expect(window.sessionStorage.getItem('liberty.tenant')).toBe('beta');
     expect(calls).toContain('GET /api/v1/tenants/beta/integrations');
 
-    // sair
+    // sair (hidden: o Mantine ainda anima a abertura do menu e, sob carga, o item passa por um
+    // instante fora da árvore de acessibilidade)
     await userEvent.click(screen.getByRole('button', { name: /ana/ }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Sair' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Sair', hidden: true }));
     expect(manager.signoutRedirect).toHaveBeenCalledOnce();
     expect(window.sessionStorage.getItem('liberty.tenant')).toBeNull();
   });

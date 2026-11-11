@@ -221,6 +221,7 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] Filas por tenant (envelope, DLQ, bulkhead por tenant, fila `webhook`) com publicação pelos scripts depois do commit
 - [x] Exportações em CSV (fila, URL assinada, só o tenant dono baixa) e remoção por chave com aprovação reforçada
 - [ ] Fase 2 (demais recursos: painel em tempo real e alertas por WebSocket)
+- [ ] Fase 3: [backlog de evolução](docs/fase-3-backlog.md), a partir do Portão 3
 
 ## Documentação
 
@@ -230,6 +231,7 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [Requisitos não funcionais e SLOs](docs/requisitos-nao-funcionais.md)
 - [Runbooks de operação](docs/runbooks/README.md) e [segurança (ameaças e ASVS)](docs/seguranca/modelo-de-ameacas.md)
 - [Portão 2: critérios do MVP e estado](docs/portao-2.md)
+- [Fase 3: backlog de evolução e pendências de liberação](docs/fase-3-backlog.md)
 
 ## Contribuição
 

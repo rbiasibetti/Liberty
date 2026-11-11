@@ -6,6 +6,8 @@ liberty:
     max-concurrent: 1000
   metrics:
     password: teste-metricas
+  exports:
+    directory: target/exports-test
   queue:
     # os consumidores têm testes próprios; nos testes de contrato as mensagens ficam paradas e visíveis
     enabled: false

@@ -22,6 +22,8 @@ Estado verificado em 2026-11-07. "Demonstrado" quer dizer que um teste automatiz
 | Backup e restauração do core testados | Feito: `BackupRestoreTest` (backup com checksum, verificação, restauração sob outro nome, conferência de dados, migrações e gatilhos) e [runbooks/restaurar-core.md](runbooks/restaurar-core.md). Backup de log e RPO de 15 min são política, não foram exercitados |
 | Piloto em PRD | **Pendente**: depende de um cliente real |
 
+Além dos itens acima, as limitações conhecidas das etapas seguintes e as medidas para cada uma estão em [fase-3-backlog.md](fase-3-backlog.md); o bloco A dele reúne o que ainda impede o uso em produção.
+
 ## Veredito
 
 O Portão 2 **não está cumprido**. Os critérios 2, 3 e 4 têm prova automatizada; o 1 tem prova técnica mas falta a observação com uma pessoa; o 5 não foi medido. Para fechar: (a) rodar o k6 contra uma implantação de homologação e registrar os p95 aqui; (b) sessão com um integrador real; (c) DAST e pentest; (d) piloto.

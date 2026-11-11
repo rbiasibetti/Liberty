@@ -4,6 +4,7 @@ import {
   IconHistory,
   IconListDetails,
   IconLogout,
+  IconBuilding,
   IconSettings,
   IconUser,
 } from '@tabler/icons-react';
@@ -84,6 +85,15 @@ export function AppLayout() {
             label="Auditoria"
             leftSection={<IconHistory size={16} />}
             active={location.pathname === '/auditoria'}
+          />
+        )}
+        {tenant.platformAdmin && (
+          <NavLink
+            component={Link}
+            to="/plataforma"
+            label="Tenants"
+            leftSection={<IconBuilding size={16} />}
+            active={location.pathname === '/plataforma'}
           />
         )}
         {tenant.platformAdmin && (

@@ -6,6 +6,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { AuditPage } from './screens/AuditPage';
 import { EditorPage } from './screens/EditorPage';
 import { IntegrationsPage } from './screens/IntegrationsPage';
+import { PlatformTenantsPage } from './screens/PlatformTenantsPage';
 import { ReviewPage } from './screens/ReviewPage';
 import { TenantAdminPage } from './screens/TenantAdminPage';
 import { TenantProvider } from './tenant/TenantProvider';
@@ -40,6 +41,7 @@ function Gate() {
         <Route path="integracoes/:key/versoes/:no" element={<ReviewPage />} />
         <Route path="auditoria" element={<AuditPage />} />
         <Route path="administracao" element={<TenantAdminPage />} />
+        <Route path="plataforma" element={<PlatformTenantsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

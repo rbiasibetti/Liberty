@@ -46,6 +46,10 @@ Base `/api/v1/platform/tenants/{slug}`; exige o papel de administrador da plataf
 
 | Método e caminho | O que faz |
 | --- | --- |
+| `GET /api/v1/platform/tenants` | Lista os tenants |
+| `POST /api/v1/platform/tenants` | Cria `{slug, name, planCode?}`: ativo, sem conexões, usuários nem clientes; slug reservado ou inválido e plano desconhecido são 400, duplicado 409 |
+| `PATCH /api/v1/platform/tenants/{slug}` | Altera `{name?, planCode?, status?}`; suspender corta usuários e clientes na hora; `ARCHIVED` é definitivo (409 ao tentar alterar) |
+| `GET /{slug}/onboarding` (sob `/api/v1/platform/tenants`) | Checklist: tenant ativo, conexões testadas, privilégios do usuário do banco, quem escreve e quem aprova, cliente OAuth2; `ready` ignora avisos |
 | `GET /connections` | Conexões de HML e PRD (sem senhas) |
 | `PUT /connections/{env}` | Cria ou atualiza `{jdbcUrl, dbUsername, poolMax, password}`; a senha vai para o cofre (obrigatória na criação) |
 | `POST /connections/{env}/test` | Abre uma conexão com os dados salvos e roda `SELECT 1` |

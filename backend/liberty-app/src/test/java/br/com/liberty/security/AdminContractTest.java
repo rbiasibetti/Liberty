@@ -3,6 +3,7 @@ package br.com.liberty.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
@@ -212,6 +213,194 @@ class AdminContractTest {
   }
 
   // ---------- conexões ----------
+
+  // ---------- tenants: criar, alterar, suspender e conferir o onboarding ----------
+
+  @Test
+  void onlyThePlatformAdministratorCreatesListsAndChangesTenants() throws Exception {
+    for (String user : List.of("viewer", "integrator", "publisher")) {
+      assertThat(call(get("/api/v1/platform/tenants"), oidc.userToken(user), null).getStatus())
+          .as(user)
+          .isEqualTo(403);
+      assertThat(
+              call(
+                      post("/api/v1/platform/tenants"),
+                      oidc.userToken(user),
+                      "{\"slug\":\"intruso\",\"name\":\"x\"}")
+                  .getStatus())
+          .isEqualTo(403);
+      assertThat(
+              call(
+                      patch("/api/v1/platform/tenants/acme"),
+                      oidc.userToken(user),
+                      "{\"status\":\"SUSPENDED\"}")
+                  .getStatus())
+          .isEqualTo(403);
+      assertThat(
+              call(get("/api/v1/platform/tenants/acme/onboarding"), oidc.userToken(user), null)
+                  .getStatus())
+          .isEqualTo(403);
+    }
+    assertThat(tenants.findBySlug("intruso")).isEmpty();
+
+    var created =
+        admin(
+            post("/api/v1/platform/tenants"),
+            "{\"slug\":\"novo-cliente\",\"name\":\"Novo Cliente\"}");
+    var duplicate =
+        admin(post("/api/v1/platform/tenants"), "{\"slug\":\"novo-cliente\",\"name\":\"Outro\"}");
+    var listed = admin(get("/api/v1/platform/tenants"), null).getContentAsString();
+
+    assertThat(created.getStatus()).as(created.getContentAsString()).isEqualTo(201);
+    assertThat(json(created))
+        .containsEntry("slug", "novo-cliente")
+        .containsEntry("planCode", "STANDARD")
+        .containsEntry("status", "ACTIVE");
+    assertThat(duplicate.getStatus()).isEqualTo(409);
+    assertThat(listed).contains("\"slug\":\"acme\"", "\"slug\":\"novo-cliente\"");
+    assertThat(listed.indexOf("acme"))
+        .as("ordenado por slug")
+        .isLessThan(listed.indexOf("novo-cliente"));
+  }
+
+  @Test
+  void tenantCreationValidatesSlugNameAndPlan() throws Exception {
+    for (String slug :
+        List.of("A", "a", "Api", "x_y", "-ab", "admin", "platform", "oauth2", "a".repeat(64), "")) {
+      assertThat(
+              admin(post("/api/v1/platform/tenants"), "{\"slug\":\"" + slug + "\",\"name\":\"x\"}")
+                  .getStatus())
+          .as("slug '" + slug + "'")
+          .isEqualTo(400);
+    }
+    assertThat(
+            admin(post("/api/v1/platform/tenants"), "{\"slug\":\"sem-nome\",\"name\":\"  \"}")
+                .getStatus())
+        .isEqualTo(400);
+    assertThat(
+            admin(
+                    post("/api/v1/platform/tenants"),
+                    "{\"slug\":\"plano-ruim\",\"name\":\"x\",\"planCode\":\"OURO\"}")
+                .getStatus())
+        .isEqualTo(400);
+    assertThat(admin(post("/api/v1/platform/tenants"), "{\"name\":\"x\"}").getStatus())
+        .isEqualTo(400);
+    assertThat(tenants.findBySlug("plano-ruim")).isEmpty();
+  }
+
+  @Test
+  void suspendingATenantStopsItsUsersAtOnceAndArchivingIsFinal() throws Exception {
+    admin(post("/api/v1/platform/tenants"), "{\"slug\":\"ciclo\",\"name\":\"Ciclo\"}");
+    admin(put("/api/v1/platform/tenants/ciclo/users/ana-ciclo/roles/VIEWER"), null);
+    String user = oidc.userToken("ana-ciclo");
+    var integrations = get("/api/v1/tenants/ciclo/integrations");
+    assertThat(call(integrations, user, null).getStatus()).isEqualTo(200);
+
+    var suspended = admin(patch("/api/v1/platform/tenants/ciclo"), "{\"status\":\"SUSPENDED\"}");
+    assertThat(suspended.getStatus()).isEqualTo(200);
+    assertThat(json(suspended)).containsEntry("status", "SUSPENDED");
+    assertThat(call(get("/api/v1/tenants/ciclo/integrations"), user, null).getStatus())
+        .as("suspenso, o usuário perde o acesso na hora")
+        .isEqualTo(403);
+
+    assertThat(
+            admin(
+                    patch("/api/v1/platform/tenants/ciclo"),
+                    "{\"status\":\"ACTIVE\",\"planCode\":\"STANDARD\",\"name\":\"Ciclo Novo\"}")
+                .getStatus())
+        .isEqualTo(200);
+    assertThat(call(get("/api/v1/tenants/ciclo/integrations"), user, null).getStatus())
+        .isEqualTo(200);
+    assertThat(tenants.findBySlug("ciclo").orElseThrow().getName()).isEqualTo("Ciclo Novo");
+
+    assertThat(
+            admin(patch("/api/v1/platform/tenants/ciclo"), "{\"status\":\"ARCHIVED\"}").getStatus())
+        .isEqualTo(200);
+    assertThat(
+            admin(patch("/api/v1/platform/tenants/ciclo"), "{\"status\":\"ACTIVE\"}").getStatus())
+        .as("arquivado não volta")
+        .isEqualTo(409);
+    assertThat(call(get("/api/v1/tenants/ciclo/integrations"), user, null).getStatus())
+        .isEqualTo(403);
+
+    assertThat(
+            admin(patch("/api/v1/platform/tenants/acme"), "{\"status\":\"EXCLUIDO\"}").getStatus())
+        .isEqualTo(400);
+    assertThat(admin(patch("/api/v1/platform/tenants/acme"), "{\"planCode\":\"OURO\"}").getStatus())
+        .isEqualTo(400);
+    assertThat(admin(patch("/api/v1/platform/tenants/acme"), "{\"name\":\" \"}").getStatus())
+        .isEqualTo(400);
+    assertThat(admin(patch("/api/v1/platform/tenants/inexistente"), "{\"name\":\"x\"}").getStatus())
+        .isEqualTo(404);
+  }
+
+  @Test
+  void theOnboardingChecklistSaysWhatIsMissingAndWarnsAboutExcessivePrivileges() throws Exception {
+    admin(post("/api/v1/platform/tenants"), "{\"slug\":\"checklist\",\"name\":\"Checklist\"}");
+
+    var empty = json(admin(get("/api/v1/platform/tenants/checklist/onboarding"), null));
+    assertThat(empty).containsEntry("ready", false);
+    assertThat(statusOf(empty, "conexao-hml")).isEqualTo("PENDING");
+    assertThat(statusOf(empty, "conexao-prd")).isEqualTo("PENDING");
+    assertThat(statusOf(empty, "quatro-olhos")).isEqualTo("PENDING");
+    assertThat(statusOf(empty, "cliente-oauth2")).isEqualTo("PENDING");
+    assertThat(statusOf(empty, "tenant-ativo")).isEqualTo("OK");
+
+    for (String env : List.of("HML", "PRD")) {
+      assertThat(
+              admin(
+                      put("/api/v1/platform/tenants/checklist/connections/" + env),
+                      connectionBody(TENANT_DB.password()))
+                  .getStatus())
+          .isEqualTo(200);
+    }
+    admin(put("/api/v1/platform/tenants/checklist/users/autor/roles/INTEGRATOR"), null);
+    admin(put("/api/v1/platform/tenants/checklist/users/autor/roles/PUBLISHER"), null);
+    assertThat(
+            statusOf(
+                json(admin(get("/api/v1/platform/tenants/checklist/onboarding"), null)),
+                "quatro-olhos"))
+        .as("a mesma pessoa não cumpre os dois papéis")
+        .isEqualTo("PENDING");
+    admin(put("/api/v1/platform/tenants/checklist/users/revisor/roles/PUBLISHER"), null);
+    admin(
+        post("/api/v1/platform/tenants/checklist/clients"),
+        "{\"clientId\":\"sistema-checklist\",\"environment\":\"HML\",\"scopes\":[\"integration:execute:x\"]}");
+
+    var done = json(admin(get("/api/v1/platform/tenants/checklist/onboarding"), null));
+
+    assertThat(done).containsEntry("ready", true);
+    assertThat(statusOf(done, "conexao-hml")).isEqualTo("OK");
+    assertThat(statusOf(done, "quatro-olhos")).isEqualTo("OK");
+    assertThat(statusOf(done, "cliente-oauth2")).isEqualTo("OK");
+    assertThat(statusOf(done, "privilegios-hml"))
+        .as("o usuário de teste é sysadmin")
+        .isEqualTo("WARN");
+    assertThat(detailOf(done, "privilegios-hml")).contains("sysadmin");
+    assertThat(done.toString()).doesNotContain(TENANT_DB.password());
+    assertThat(admin(get("/api/v1/platform/tenants/inexistente/onboarding"), null).getStatus())
+        .isEqualTo(404);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String statusOf(Map<String, Object> onboarding, String id) {
+    return ((List<Map<String, Object>>) onboarding.get("checks"))
+        .stream()
+            .filter(c -> id.equals(c.get("id")))
+            .map(c -> (String) c.get("status"))
+            .findFirst()
+            .orElse("AUSENTE");
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String detailOf(Map<String, Object> onboarding, String id) {
+    return ((List<Map<String, Object>>) onboarding.get("checks"))
+        .stream()
+            .filter(c -> id.equals(c.get("id")))
+            .map(c -> (String) c.get("detail"))
+            .findFirst()
+            .orElse("");
+  }
 
   @Test
   void connectionsStorePasswordsOnlyInTheVaultAndCanBeTested() throws Exception {

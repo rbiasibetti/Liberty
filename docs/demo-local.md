@@ -23,7 +23,7 @@ Escolha **quem você é antes de clicar em Entrar**, abrindo a URL do usuário:
 | --- | --- | --- |
 | `integrador` | `http://127.0.0.1:18081/__user?sub=integrador` | cria e mapeia integrações, testa no sandbox, envia para revisão |
 | `aprovador` | `http://127.0.0.1:18081/__user?sub=aprovador` | revisa, publica em HML e PRD, faz rollback |
-| `admin` | `http://127.0.0.1:18081/__user?sub=admin` | administra o tenant: conexões, clientes OAuth2, usuários, hosts de saída |
+| `admin` | `http://127.0.0.1:18081/__user?sub=admin` | administra a plataforma: cria e suspende tenants (menu Tenants), confere o onboarding, administra conexões, clientes OAuth2, usuários e hosts de saída |
 
 Depois abra `http://127.0.0.1:5173` e clique em Entrar. Para trocar de usuário, abra a URL do outro, use Sair e Entrar de novo. O autor de uma versão não a aprova: use `integrador` para escrever e `aprovador` para publicar.
 

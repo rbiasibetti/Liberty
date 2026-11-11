@@ -313,3 +313,151 @@ describe('administração do tenant', () => {
     });
   });
 });
+
+describe('tenants da plataforma', () => {
+  const TENANTS = [
+    {
+      slug: 'acme',
+      name: 'Acme',
+      planCode: 'STANDARD',
+      status: 'ACTIVE',
+      createdAt: '2026-11-07T10:00:00Z',
+    },
+    {
+      slug: 'velho',
+      name: 'Velho',
+      planCode: 'STANDARD',
+      status: 'ARCHIVED',
+      createdAt: '2025-01-01T10:00:00Z',
+    },
+  ];
+  const routes = (extra: Record<string, unknown> = {}) => ({
+    'GET /api/v1/me': ADMIN,
+    'GET /api/v1/platform/tenants': TENANTS,
+    ...extra,
+  });
+
+  it('quem não é administrador da plataforma não entra', async () => {
+    fakeApi({ 'GET /api/v1/me': ME, [`GET ${T}/integrations`]: SUMMARY });
+    renderApp('/plataforma');
+
+    expect(await screen.findByText('Acesso restrito')).toBeTruthy();
+  });
+
+  it('lista os tenants, cria um novo e mostra o erro do servidor', async () => {
+    let failing = true;
+    const calls = fakeApi(
+      routes({
+        'POST /api/v1/platform/tenants': () =>
+          failing
+            ? json({ detail: 'Já existe um tenant com este identificador' }, { status: 409 })
+            : json({ ...TENANTS[0], slug: 'novo', name: 'Novo' }, { status: 201 }),
+      }),
+    );
+    renderApp('/plataforma');
+
+    expect(await screen.findByText('Tenants da plataforma')).toBeTruthy();
+    expect(await screen.findByRole('cell', { name: 'acme' })).toBeTruthy();
+    expect(screen.getByText('ARCHIVED')).toBeTruthy();
+    expect(screen.queryByLabelText('Editar velho')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Novo tenant' }));
+    await userEvent.type(await screen.findByLabelText('Identificador (slug)'), 'novo');
+    await userEvent.type(screen.getByLabelText('Nome'), 'Novo');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar tenant' }));
+    expect(await screen.findByText(/Já existe um tenant/)).toBeTruthy();
+
+    failing = false;
+    await userEvent.click(screen.getByRole('button', { name: 'Criar tenant' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Novo tenant', { selector: 'h2' })).toBeNull();
+    });
+    expect(last(calls, 'POST', '/platform/tenants')?.body).toEqual({
+      slug: 'novo',
+      name: 'Novo',
+      planCode: 'STANDARD',
+    });
+  });
+
+  it('edita plano e estado avisando que arquivar é definitivo', async () => {
+    const calls = fakeApi(
+      routes({
+        'PATCH /api/v1/platform/tenants/acme': () => json({ ...TENANTS[0], status: 'SUSPENDED' }),
+      }),
+    );
+    renderApp('/plataforma');
+
+    await userEvent.click(await screen.findByLabelText('Editar acme'));
+    await userEvent.click(first(await screen.findAllByLabelText('Estado')));
+    await userEvent.click(await screen.findByRole('option', { name: 'ARCHIVED', hidden: true }));
+    expect(await screen.findByText('Arquivar não tem volta')).toBeTruthy();
+    await userEvent.click(first(screen.getAllByLabelText('Estado')));
+    await userEvent.click(await screen.findByRole('option', { name: 'SUSPENDED', hidden: true }));
+    await userEvent.clear(screen.getByLabelText('Plano'));
+    await userEvent.type(screen.getByLabelText('Plano'), 'PREMIUM');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => {
+      expect(last(calls, 'PATCH', '/platform/tenants/acme')?.body).toEqual({
+        name: 'Acme',
+        planCode: 'PREMIUM',
+        status: 'SUSPENDED',
+      });
+    });
+  });
+
+  it('mostra o checklist de onboarding e abre a administração do tenant', async () => {
+    fakeApi(
+      routes({
+        'GET /api/v1/platform/tenants/acme/onboarding': {
+          slug: 'acme',
+          ready: false,
+          checks: [
+            {
+              id: 'tenant-ativo',
+              label: 'Tenant ativo',
+              status: 'OK',
+              detail: 'O tenant está ativo',
+            },
+            {
+              id: 'conexao-prd',
+              label: 'Conexão PRD',
+              status: 'PENDING',
+              detail: 'Cadastre a conexão com o banco do cliente em PRD',
+            },
+            {
+              id: 'privilegios-hml',
+              label: 'Privilégios do usuário do banco em HML',
+              status: 'WARN',
+              detail: 'O usuário tem privilégio excessivo (sysadmin)',
+            },
+          ],
+        },
+        [`GET ${P}/connections`]: [],
+        [`GET ${P}/clients`]: [],
+        [`GET ${P}/users`]: [],
+      }),
+    );
+    renderApp('/plataforma');
+
+    await userEvent.click(await screen.findByLabelText('Onboarding de acme'));
+    expect(await screen.findByText('Ainda falta configurar')).toBeTruthy();
+    expect(screen.getByText('PENDING')).toBeTruthy();
+    expect(screen.getByText(/privilégio excessivo \(sysadmin\)/)).toBeTruthy();
+  });
+
+  it('o link Administrar abre a administração já com o tenant escolhido', async () => {
+    fakeApi(
+      routes({
+        [`GET ${P}/connections`]: [],
+        [`GET ${P}/clients`]: [],
+        [`GET ${P}/users`]: [],
+      }),
+    );
+    renderApp('/administracao?tenant=acme');
+
+    const field = await screen.findByRole('textbox', { name: /Tenant/ });
+    expect((field as HTMLInputElement).value).toBe('acme');
+    expect(await screen.findByText('Homologação (HML)')).toBeTruthy();
+  });
+});

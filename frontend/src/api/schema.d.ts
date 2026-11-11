@@ -448,6 +448,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tenants da plataforma */
+        get: operations["listTenants"];
+        put?: never;
+        /** Cria um tenant (sem conexões, usuários nem clientes; veja o onboarding) */
+        post: operations["createTenant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Altera nome, plano ou estado (ACTIVE, SUSPENDED, ARCHIVED; arquivado não volta) */
+        patch: operations["updateTenant"];
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{slug}/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /** O que falta para o tenant ser usado (conexões testadas, privilégios, quatro olhos, cliente) */
+        get: operations["tenantOnboarding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/tenants/{slug}/connections": {
         parameters: {
             query?: never;
@@ -864,6 +920,40 @@ export interface components {
             createdAt?: string | null;
             /** Format: date-time */
             diedAt?: string | null;
+        };
+        Tenant: {
+            slug: string;
+            name: string;
+            planCode: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED" | "ARCHIVED";
+            /** Format: date-time */
+            createdAt?: string | null;
+        };
+        TenantCreate: {
+            slug: string;
+            name: string;
+            /** @description Omitido usa STANDARD */
+            planCode?: string | null;
+        };
+        TenantUpdate: {
+            name?: string | null;
+            planCode?: string | null;
+            /** @enum {string|null} */
+            status?: "ACTIVE" | "SUSPENDED" | "ARCHIVED" | null;
+        };
+        Onboarding: {
+            slug: string;
+            /** @description Nenhum item pendente ou falho (avisos não bloqueiam) */
+            ready: boolean;
+            checks: components["schemas"]["OnboardingCheck"][];
+        };
+        OnboardingCheck: {
+            id: string;
+            label: string;
+            /** @enum {string} */
+            status: "OK" | "PENDING" | "WARN" | "FAIL";
+            detail: string;
         };
         HttpHost: {
             host: string;
@@ -1553,6 +1643,102 @@ export interface operations {
                 };
                 content: {
                     "text/csv": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listTenants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Todos os tenants, por identificador */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantCreate"];
+            };
+        };
+        responses: {
+            /** @description Tenant criado e ativo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantUpdate"];
+            };
+        };
+        responses: {
+            /** @description Tenant atualizado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    tenantOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Checklist */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Onboarding"];
                 };
             };
             default: components["responses"]["Problem"];

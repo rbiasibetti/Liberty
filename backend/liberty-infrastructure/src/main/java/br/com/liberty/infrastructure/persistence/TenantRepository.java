@@ -11,4 +11,6 @@ public interface TenantRepository extends Repository<TenantEntity, Long> {
   Optional<TenantEntity> findById(Long id);
 
   TenantEntity save(TenantEntity tenant);
+
+  java.util.List<TenantEntity> findAllByOrderBySlugAsc();
 }

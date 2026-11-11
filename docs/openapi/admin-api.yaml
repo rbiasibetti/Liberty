@@ -397,6 +397,65 @@ paths:
             text/csv:
               schema: { type: string, format: binary }
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants:
+    get:
+      operationId: listTenants
+      summary: Tenants da plataforma
+      responses:
+        "200":
+          description: Todos os tenants, por identificador
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Tenant" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createTenant
+      summary: Cria um tenant (sem conexões, usuários nem clientes; veja o onboarding)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TenantCreate" }
+      responses:
+        "201":
+          description: Tenant criado e ativo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tenant" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    patch:
+      operationId: updateTenant
+      summary: Altera nome, plano ou estado (ACTIVE, SUSPENDED, ARCHIVED; arquivado não volta)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TenantUpdate" }
+      responses:
+        "200":
+          description: Tenant atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tenant" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/platform/tenants/{slug}/onboarding:
+    parameters:
+      - $ref: "#/components/parameters/Slug"
+    get:
+      operationId: tenantOnboarding
+      summary: O que falta para o tenant ser usado (conexões testadas, privilégios, quatro olhos, cliente)
+      responses:
+        "200":
+          description: Checklist
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Onboarding" }
+        default: { $ref: "#/components/responses/Problem" }
   /api/v1/platform/tenants/{slug}/connections:
     parameters:
       - $ref: "#/components/parameters/Slug"
@@ -818,6 +877,45 @@ components:
         lastError: { type: [string, "null"] }
         createdAt: { type: [string, "null"], format: date-time }
         diedAt: { type: [string, "null"], format: date-time }
+    Tenant:
+      type: object
+      required: [slug, name, planCode, status]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        planCode: { type: string }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, ARCHIVED] }
+        createdAt: { type: [string, "null"], format: date-time }
+    TenantCreate:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        planCode: { type: [string, "null"], description: Omitido usa STANDARD }
+    TenantUpdate:
+      type: object
+      properties:
+        name: { type: [string, "null"] }
+        planCode: { type: [string, "null"] }
+        status: { type: [string, "null"], enum: [ACTIVE, SUSPENDED, ARCHIVED, null] }
+    Onboarding:
+      type: object
+      required: [slug, ready, checks]
+      properties:
+        slug: { type: string }
+        ready: { type: boolean, description: Nenhum item pendente ou falho (avisos não bloqueiam) }
+        checks:
+          type: array
+          items: { $ref: "#/components/schemas/OnboardingCheck" }
+    OnboardingCheck:
+      type: object
+      required: [id, label, status, detail]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        status: { type: string, enum: [OK, PENDING, WARN, FAIL] }
+        detail: { type: string }
     HttpHost:
       type: object
       required: [host, createdBy, createdAt]

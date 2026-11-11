@@ -240,6 +240,7 @@ O projeto está em desenvolvimento ativo, etapa por etapa.
 - [x] HTTP de saída dos scripts (`http.fetch`) com lista de hosts por tenant e defesa contra SSRF
 - [x] Filas por tenant (envelope, DLQ, bulkhead por tenant, fila `webhook`) com publicação pelos scripts depois do commit
 - [x] Exportações em CSV (fila, URL assinada, só o tenant dono baixa) e remoção por chave com aprovação reforçada
+- [x] Provisionamento de tenants pela API e pela interface (criar, plano, estado) com checklist de onboarding
 - [ ] Fase 2 (demais recursos: painel em tempo real e alertas por WebSocket)
 - [ ] Fase 3: [backlog de evolução](docs/fase-3-backlog.md), a partir do Portão 3
 

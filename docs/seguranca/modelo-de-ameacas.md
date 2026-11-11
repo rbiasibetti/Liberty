@@ -48,7 +48,7 @@ Legenda de estado: **ok** = controle implementado e testado; **parcial** = imple
 | Remoção em massa ou em cascata pela API | DELETE só por chave completa (uma linha, 409 se a chave não for única), sem filhos, sem corpo; publicar exige comentário de aprovação além dos quatro olhos. ADR 0036. | ok |
 | Vazamento da senha do banco | Só no Vault; o core guarda a referência; nunca em resposta, log ou erro. | ok |
 | Mistura de conexões entre tenants | Roteamento por contexto de tenant, um pool por tenant; teste com 50 tenants concorrentes. ADR 0020. | ok |
-| Gatilho do cliente com efeito externo (`xp_cmdshell`, e-mail) | Fora do nosso controle: o usuário do banco do tenant não deve ter esses privilégios. | falta (exigir no onboarding) |
+| Gatilho do cliente com efeito externo (`xp_cmdshell`, e-mail) | Fora do nosso controle: o usuário do banco do tenant não deve ter esses privilégios. | parcial: o onboarding avisa privilégio excessivo (ADR 0038); falta bloquear |
 
 ## 5. Interface web
 

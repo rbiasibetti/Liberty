@@ -49,6 +49,7 @@ class AdminApiSpecTest {
           "br.com.liberty.admin.PlatformAdminController",
           "br.com.liberty.admin.AuditController",
           "br.com.liberty.web.QueueController",
+          "br.com.liberty.admin.PlatformTenantsController",
           "br.com.liberty.web.ExportController",
           "br.com.liberty.web.ExportDownloadController"
         }) {

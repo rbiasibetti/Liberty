@@ -1,5 +1,6 @@
 import { Alert, Stack, Tabs, Text, TextInput, Title } from '@mantine/core';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useTenant } from '../tenant/tenantContext';
 import { ClientsTab } from './admin/ClientsTab';
 import { ConnectionsTab } from './admin/ConnectionsTab';
@@ -8,8 +9,10 @@ import { UsersTab } from './admin/UsersTab';
 /** Tela 6: administração de um tenant (conexões, clientes OAuth2, usuários e papéis), só para o administrador da plataforma. */
 export function TenantAdminPage() {
   const { platformAdmin, current } = useTenant();
-  const [typed, setTyped] = useState(current ?? '');
-  const [slug, setSlug] = useState(current ?? '');
+  const [params] = useSearchParams();
+  const initial = params.get('tenant') ?? current ?? '';
+  const [typed, setTyped] = useState(initial);
+  const [slug, setSlug] = useState(initial);
 
   if (!platformAdmin) {
     return (

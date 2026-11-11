@@ -43,3 +43,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0035](0035-filas.md) | E23 | Filas por tenant |
 | [0036](0036-exportacoes-e-remocao.md) | E24 | Exportações e remoção por chave |
 | [0037](0037-implantacao-em-vm-e-configuracao-em-execucao.md) | A01/A02 | Implantação em VM e configuração em tempo de execução |
+| [0038](0038-provisionamento-de-tenants.md) | A09 | Provisionamento de tenants |

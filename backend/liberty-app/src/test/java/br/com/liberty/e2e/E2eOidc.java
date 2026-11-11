@@ -179,7 +179,11 @@ final class E2eOidc implements AutoCloseable {
       throw new IOException(e);
     }
     Map<String, Object> body = new HashMap<>();
-    body.put("access_token", sign(grant.sub(), null, Map.of()));
+    Map<String, Object> roles =
+        grant.sub().equals("admin")
+            ? Map.of("realm_access", Map.of("roles", List.of("liberty-platform-admin")))
+            : Map.of();
+    body.put("access_token", sign(grant.sub(), null, roles));
     body.put("id_token", sign(grant.sub(), grant.nonce(), Map.of()));
     body.put("token_type", "Bearer");
     body.put("expires_in", 3600);

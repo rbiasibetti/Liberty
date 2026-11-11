@@ -151,6 +151,14 @@ cd frontend && npm install && npm run dev                # interface web em http
 
 Sem Vault, `LIBERTY_SECURITY_KEYS_STORE=MEMORY` gera chaves só em memória (apenas desenvolvimento).
 
+### Testar à mão, sem Docker
+
+```bash
+scripts/demo.sh
+```
+
+Sobe a API e a interface com OIDC e Vault falsos e bancos descartáveis com dados de exemplo; veja [docs/demo-local.md](docs/demo-local.md).
+
 ### Comandos úteis
 
 ```bash

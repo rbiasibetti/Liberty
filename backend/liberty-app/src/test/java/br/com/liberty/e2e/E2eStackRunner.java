@@ -120,11 +120,19 @@ class E2eStackRunner {
             + " total DECIMAL(12,2) NOT NULL)",
         "CREATE TABLE dbo.tb_pedido_item (id BIGINT IDENTITY PRIMARY KEY, pedido_id BIGINT NOT NULL"
             + " REFERENCES dbo.tb_pedido(id), sku VARCHAR(30) NOT NULL, quantidade INT NOT NULL)");
+    if (Boolean.getBoolean("liberty.e2e.sample-data")) {
+      tenantSql(
+          "INSERT INTO dbo.tb_pedido (cliente, total) VALUES (N'Ana', 120.50), (N'Bruno', 80.00), (N'Carla', 15.90)",
+          "INSERT INTO dbo.tb_pedido_item (pedido_id, sku, quantidade) VALUES (1, 'A-1', 2), (1, 'B-7', 1), (2, 'A-1', 5), (3, 'C-3', 1)");
+    }
     long acme = tenants.save(new TenantEntity("acme", "Acme", "STANDARD")).getId();
     roles.save(new UserRoleEntity("integrador", acme, TenantRole.VIEWER));
     roles.save(new UserRoleEntity("integrador", acme, TenantRole.INTEGRATOR));
     roles.save(new UserRoleEntity("aprovador", acme, TenantRole.VIEWER));
     roles.save(new UserRoleEntity("aprovador", acme, TenantRole.PUBLISHER));
+    roles.save(
+        new UserRoleEntity(
+            "admin", acme, TenantRole.VIEWER)); // seletor de tenant da tela de administração
 
     HttpClient http = HttpClient.newHttpClient();
     String admin = oidc.accessToken("admin", List.of("liberty-platform-admin"));
@@ -156,7 +164,7 @@ class E2eStackRunner {
 
     Path stop = Path.of("target", "e2e.stop");
     Files.deleteIfExists(stop);
-    long deadline = System.currentTimeMillis() + 30 * 60_000L;
+    long deadline = System.currentTimeMillis() + Long.getLong("liberty.e2e.minutes", 30L) * 60_000L;
     while (!Files.exists(stop) && System.currentTimeMillis() < deadline) {
       Thread.sleep(500);
     }

@@ -76,6 +76,10 @@ Todo o bloco A concluído, a E25 entregue e o piloto em PRD rodando sem incident
 
 ---
 
+## O que já dá para testar hoje
+
+`scripts/demo.sh` sobe um MVP local para teste manual de todos os fluxos (ver [demo-local.md](demo-local.md)). Ele **não** substitui os itens do bloco A: usa o classpath de testes, OIDC e Vault falsos e dados descartáveis.
+
 ## Ordem sugerida
 
 1. **A01, A12** (dias, desbloqueiam testar a imagem de verdade).

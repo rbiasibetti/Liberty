@@ -38,3 +38,7 @@ data/
 # Playwright
 frontend/test-results/
 frontend/playwright-report/
+
+# Pacotes de implantação gerados
+deploy/vm/*.tar.gz
+deploy/vm/*.tar.gz.sha256

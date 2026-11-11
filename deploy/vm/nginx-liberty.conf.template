@@ -1,0 +1,67 @@
+# Modelo do nginx do Liberty. O install.sh troca @SERVER_NAME@ e @OIDC_ORIGIN@ (origem do provedor de
+# login, por exemplo https://login.exemplo.com) e grava em /etc/nginx/conf.d/liberty.conf.
+# TLS: ponha o certificado (por exemplo com certbot) antes de ir para produção; sem TLS o login OIDC
+# e os tokens trafegam em claro.
+
+server {
+  listen 80;
+  server_name @SERVER_NAME@;
+  server_tokens off;
+  # Com TLS configurado, troque este bloco por: return 301 https://$host$request_uri;
+
+  root /opt/liberty/current/frontend/dist;
+  index index.html;
+
+  client_max_body_size 6m;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+  add_header Cross-Origin-Opener-Policy "same-origin" always;
+  # connect-src e form-action incluem a origem do provedor de login (troca do código e redirecionamentos)
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' @OIDC_ORIGIN@; frame-ancestors 'none'; base-uri 'self'; form-action 'self' @OIDC_ORIGIN@" always;
+
+  # API de administração e de exportação, endpoints de token e execução: tudo para a API
+  location ~ ^/(api|oauth2|\.well-known)/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 60s;
+  }
+  location ~ ^/[a-z0-9-]+/api/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 60s;
+  }
+
+  location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header X-Content-Type-Options "nosniff" always;
+  }
+
+  # Configuração do ambiente (endereço da API e do login), escrita pelo install.sh fora do pacote
+  location = /config.json {
+    alias /etc/liberty/config.json;
+    add_header Cache-Control "no-store";
+    add_header X-Content-Type-Options "nosniff" always;
+    default_type application/json;
+  }
+
+  location = /healthz {
+    access_log off;
+    default_type text/plain;
+    return 200 "ok";
+  }
+
+  location / {
+    try_files $uri /index.html;
+    add_header Cache-Control "no-cache";
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' @OIDC_ORIGIN@; frame-ancestors 'none'; base-uri 'self'; form-action 'self' @OIDC_ORIGIN@" always;
+  }
+}

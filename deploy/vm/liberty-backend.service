@@ -1,0 +1,35 @@
+[Unit]
+Description=Liberty (API de integração multitenant)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=liberty
+Group=liberty
+EnvironmentFile=/etc/liberty/backend.env
+WorkingDirectory=/var/lib/liberty
+# O pacote ativo é sempre /opt/liberty/current (um link para releases/<versão>)
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/urandom -jar /opt/liberty/current/backend/liberty-app.jar
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=143
+TimeoutStopSec=40
+LimitNOFILE=65536
+
+# Endurecimento: sem privilégios novos, sistema de arquivos somente leitura (exceto os dados)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/liberty
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

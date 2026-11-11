@@ -159,6 +159,18 @@ scripts/demo.sh
 
 Sobe a API e a interface com OIDC e Vault falsos e bancos descartáveis com dados de exemplo; veja [docs/demo-local.md](docs/demo-local.md).
 
+### Fumaça do artefato de produção
+
+```bash
+scripts/smoke-jar.sh
+```
+
+Sobe o jar executável (o mesmo da imagem) com o classpath do trabalhador de script e executa um script de verdade no sandbox.
+
+### Implantação
+
+O caminho mais simples é uma VM com systemd e nginx, sem Docker: veja [deploy/vm/README.md](deploy/vm/README.md) e o [ADR 0037](docs/adr/0037-implantacao-em-vm-e-configuracao-em-execucao.md). O endereço da API e do login são configurados no deploy (`/config.json`), não no build.
+
 ### Comandos úteis
 
 ```bash

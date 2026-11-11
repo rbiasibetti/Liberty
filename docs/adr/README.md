@@ -42,3 +42,4 @@ Formato: copie [template.md](template.md), use o próximo número e abra um PR.
 | [0034](0034-http-de-saida.md) | E22 | HTTP de saída dos scripts (http.fetch) |
 | [0035](0035-filas.md) | E23 | Filas por tenant |
 | [0036](0036-exportacoes-e-remocao.md) | E24 | Exportações e remoção por chave |
+| [0037](0037-implantacao-em-vm-e-configuracao-em-execucao.md) | A01/A02 | Implantação em VM e configuração em tempo de execução |
